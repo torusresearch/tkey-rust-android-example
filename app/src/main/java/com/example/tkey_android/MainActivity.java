@@ -1,14 +1,11 @@
 package com.example.tkey_android;
 
-import android.content.DialogInterface;
 import android.os.Bundle;
 
 import com.google.android.material.snackbar.Snackbar;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-
-import android.view.View;
 
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
@@ -25,13 +22,12 @@ import android.view.MenuItem;
 public class MainActivity extends AppCompatActivity {
 
     private AppBarConfiguration appBarConfiguration;
-    private ActivityMainBinding binding;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         System.loadLibrary("tkey-native");
-        String libversion = "";
+        String libversion;
         try {
             libversion = Version.current();
         } catch (RuntimeError e) {
@@ -41,14 +37,11 @@ public class MainActivity extends AppCompatActivity {
                 .setTitle("Native library version")
                 .setMessage(libversion )
                 .setCancelable(false)
-                .setPositiveButton("ok", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        // Whatever...
-                    }
+                .setPositiveButton("ok", (dialog, which) -> {
+                    // Whatever...
                 }).show();
 
-        binding = ActivityMainBinding.inflate(getLayoutInflater());
+        com.example.tkey_android.databinding.ActivityMainBinding binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
         setSupportActionBar(binding.toolbar);
@@ -57,13 +50,8 @@ public class MainActivity extends AppCompatActivity {
         appBarConfiguration = new AppBarConfiguration.Builder(navController.getGraph()).build();
         NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
 
-        binding.fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-            }
-        });
+        binding.fab.setOnClickListener(view -> Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
+                .setAction("Action", null).show());
     }
 
     @Override
