@@ -35,7 +35,7 @@ public class MainActivity extends AppCompatActivity {
         }
         new AlertDialog.Builder(MainActivity.this)
                 .setTitle("Native library version")
-                .setMessage(libversion )
+                .setMessage(libversion)
                 .setCancelable(false)
                 .setPositiveButton("ok", (dialog, which) -> {
                     // Whatever...
