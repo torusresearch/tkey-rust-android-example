@@ -13,6 +13,9 @@ import androidx.navigation.ui.AppBarConfiguration;
 import androidx.navigation.ui.NavigationUI;
 
 import com.example.tkey_android.databinding.ActivityMainBinding;
+import com.web3auth.tkey.ThresholdKey.ServiceProvider;
+import com.web3auth.tkey.ThresholdKey.StorageLayer;
+import com.web3auth.tkey.ThresholdKey.ThresholdKey;
 import com.web3auth.tkey.Version;
 import com.web3auth.tkey.RuntimeError;
 
@@ -22,6 +25,10 @@ import android.view.MenuItem;
 public class MainActivity extends AppCompatActivity {
 
     private AppBarConfiguration appBarConfiguration;
+
+    public ThresholdKey appKey;
+    public StorageLayer tkeyStorage;
+    public ServiceProvider tkeyProvider;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
