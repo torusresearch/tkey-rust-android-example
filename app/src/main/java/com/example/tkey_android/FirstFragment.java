@@ -112,11 +112,11 @@ public class FirstFragment extends Fragment {
         binding.deleteShare.setOnClickListener(view1 -> {
             try {
                 MainActivity activity = ((MainActivity) requireActivity());
-                String indexes = activity.appKey.getShareIndexes();
-                JSONArray json = new JSONArray(indexes);
-                activity.appKey.deleteShare(json.get(json.length()).toString());
+                ArrayList<String> indexes = activity.appKey.getShareIndexes();
+                String index = indexes.get(indexes.size()-1);
+                activity.appKey.deleteShare(index);
                 binding.deleteShare.setEnabled(true);
-                Snackbar snackbar = Snackbar.make(view1, json.get(json.length()).toString() + " deleted", Snackbar.LENGTH_LONG);
+                Snackbar snackbar = Snackbar.make(view1, index + " deleted", Snackbar.LENGTH_LONG);
                 snackbar.show();
             } catch (RuntimeError | JSONException e) {
                 throw new RuntimeException(e);
