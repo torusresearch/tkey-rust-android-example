@@ -1,9 +1,11 @@
 package com.example.tkey_android;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
@@ -25,12 +27,33 @@ import com.web3auth.tkey.ThresholdKey.StorageLayer;
 import com.web3auth.tkey.ThresholdKey.ThresholdKey;
 
 import org.json.JSONException;
+import org.torusresearch.customauth.CustomAuth;
+import org.torusresearch.customauth.types.Auth0ClientOptions;
+import org.torusresearch.customauth.types.CustomAuthArgs;
+import org.torusresearch.customauth.types.LoginType;
+import org.torusresearch.customauth.types.NoAllowedBrowserFoundException;
+import org.torusresearch.customauth.types.SubVerifierDetails;
+import org.torusresearch.customauth.types.TorusLoginResponse;
+import org.torusresearch.customauth.types.UserCancelledException;
+import org.torusresearch.customauth.utils.Helpers;
+import org.torusresearch.fetchnodedetails.types.TorusNetwork;
 
+import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.concurrent.CompletableFuture;
 
 public class FirstFragment extends Fragment {
 
     private FragmentFirstBinding binding;
+    private LoginVerifier selectedLoginVerifier;
+    private CustomAuth torusSdk;
+    private BigInteger privKey = null;
+
+    private final String[] allowedBrowsers = new String[]{
+            "com.android.chrome", // Chrome stable
+            "com.google.android.apps.chrome", // Chrome system
+            "com.android.chrome.beta", // Chrome beta
+    };
 
     @Override
     public View onCreateView(
@@ -53,6 +76,12 @@ public class FirstFragment extends Fragment {
             binding.createThresholdKey.setEnabled(true);
             binding.reconstructThresholdKey.setEnabled(false);
         }
+        CustomAuthArgs args = new CustomAuthArgs("https://scripts.toruswallet.io/redirect.html", TorusNetwork.TESTNET, "torusapp://org.torusresearch.customauthandroid/redirect");
+        // args.setEnableOneKey(true);
+
+        // Initialize CustomAuth
+        this.torusSdk = new CustomAuth(args, (((MainActivity) requireActivity())));
+
         binding.generateNewShare.setEnabled(false);
         binding.deleteShare.setEnabled(false);
         binding.deleteSeedPhrase.setEnabled(false);
@@ -60,11 +89,62 @@ public class FirstFragment extends Fragment {
         binding.buttonFirst.setOnClickListener(view1 -> NavHostFragment.findNavController(FirstFragment.this)
                 .navigate(R.id.action_FirstFragment_to_SecondFragment));
 
+        binding.googleLogin.setOnClickListener(view1 -> {
+            try {
+                MainActivity activity = ((MainActivity) requireActivity());
+                selectedLoginVerifier = new LoginVerifier("Google", LoginType.GOOGLE, "221898609709-obfn3p63741l5333093430j3qeiinaa8.apps.googleusercontent.com", "google-lrc");
+
+                Auth0ClientOptions.Auth0ClientOptionsBuilder builder = null;
+                if (this.selectedLoginVerifier.getDomain() != null) {
+                    builder = new Auth0ClientOptions.Auth0ClientOptionsBuilder(this.selectedLoginVerifier.getDomain());
+                    builder.setVerifierIdField(this.selectedLoginVerifier.getVerifierIdField());
+                    builder.setVerifierIdCaseSensitive(this.selectedLoginVerifier.isVerfierIdCaseSensitive());
+                }
+                CompletableFuture<TorusLoginResponse> torusLoginResponseCf;
+                if (builder == null) {
+                    Log.d("name", this.selectedLoginVerifier.getVerifier());
+                    torusLoginResponseCf = this.torusSdk.triggerLogin(new SubVerifierDetails(this.selectedLoginVerifier.getTypeOfLogin(),
+                            this.selectedLoginVerifier.getVerifier(),
+                            this.selectedLoginVerifier.getClientId())
+                            .setPreferCustomTabs(true)
+                            .setAllowedBrowsers(allowedBrowsers));
+                } else {
+                    torusLoginResponseCf = this.torusSdk.triggerLogin(new SubVerifierDetails(this.selectedLoginVerifier.getTypeOfLogin(),
+                            this.selectedLoginVerifier.getVerifier(),
+                            this.selectedLoginVerifier.getClientId(), builder.build())
+                            .setPreferCustomTabs(true)
+                            .setAllowedBrowsers(allowedBrowsers));
+                }
+
+                torusLoginResponseCf.whenComplete((torusLoginResponse, error) -> {
+                    if (error != null) {
+                        renderError(error);
+                    } else {
+                        String publicAddress = torusLoginResponse.getPublicAddress();
+                        this.privKey = torusLoginResponse.getPrivateKey();
+                        Log.d(MainActivity.class.getSimpleName(), publicAddress);
+                        Log.d("privkey",this.privKey.toString(16));
+//                        ((TextView) findViewById(R.id.output)).setText(publicAddress);
+                        binding.resultView.setText(publicAddress);
+                        try {
+                            activity.tkeyProvider = new ServiceProvider(false, this.privKey.toString());
+                        } catch (RuntimeError e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                });
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
         binding.createThresholdKey.setOnClickListener(view1 -> {
             try {
                 PrivateKey postBoxKey = PrivateKey.generate();
+                Log.d("postkey", postBoxKey.hex);
+
                 MainActivity activity = ((MainActivity) requireActivity());
                 activity.tkeyStorage = new StorageLayer(false, "https://metadata.tor.us", 2);
+//                activity.tkeyProvider = new ServiceProvider(false, this.privKey.toString(16));
                 activity.tkeyProvider = new ServiceProvider(false, postBoxKey.hex);
                 activity.appKey = new ThresholdKey(null, null, activity.tkeyStorage, activity.tkeyProvider, null, null, false, false);
                 PrivateKey key = PrivateKey.generate();
@@ -74,12 +154,15 @@ public class FirstFragment extends Fragment {
                             Exception e = ((com.web3auth.tkey.ThresholdKey.Common.Result.Error<KeyDetails>) result).exception;
                             Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e.toString(), Snackbar.LENGTH_LONG);
                             snackbar.show();
+                            Log.d("bug","here2");
+
                         });
                     } else if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
                         KeyDetails details = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<KeyDetails>) result).data;
                         activity.appKey.reconstruct(reconstruct_result -> {
                             if (reconstruct_result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
                                 requireActivity().runOnUiThread(() -> {
+                                    Log.d("bug","here1");
                                     Exception e = ((com.web3auth.tkey.ThresholdKey.Common.Result.Error<KeyReconstructionDetails>) reconstruct_result).exception;
                                     Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e.toString(), Snackbar.LENGTH_LONG);
                                     snackbar.show();
@@ -96,6 +179,7 @@ public class FirstFragment extends Fragment {
                                         binding.createThresholdKey.setEnabled(false);
                                         binding.reconstructThresholdKey.setEnabled(true);
                                     } catch (RuntimeError e) {
+                                        Log.d("bug","hehe3");
                                         Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
                                         snackbar.show();
                                     }
@@ -429,6 +513,16 @@ public class FirstFragment extends Fragment {
                 throw new RuntimeException(e);
             }
         });
+    }
+
+    private void renderError(Throwable error) {
+        Log.e("result:error", "error", error);
+        Throwable reason = Helpers.unwrapCompletionException(error);
+        TextView textView = binding.resultView;
+        if (reason instanceof UserCancelledException || reason instanceof NoAllowedBrowserFoundException)
+            textView.setText(error.getMessage());
+        else
+            textView.setText("Something went wrong: " + error.getMessage());
     }
 
     @Override

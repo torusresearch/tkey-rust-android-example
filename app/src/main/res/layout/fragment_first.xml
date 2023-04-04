@@ -47,6 +47,18 @@
                 android:background="?android:attr/listDivider" />
 
             <Button
+                android:id="@+id/googleLogin"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Login with Google" />
+
+            <View
+                android:id="@+id/divider3"
+                android:layout_width="match_parent"
+                android:layout_height="10dp"
+                android:background="?android:attr/listDivider" />
+
+            <Button
                 android:id="@+id/createThresholdKey"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
