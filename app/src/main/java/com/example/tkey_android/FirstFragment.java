@@ -102,7 +102,6 @@ public class FirstFragment extends Fragment {
                 }
                 CompletableFuture<TorusLoginResponse> torusLoginResponseCf;
                 if (builder == null) {
-                    Log.d("name", this.selectedLoginVerifier.getVerifier());
                     torusLoginResponseCf = this.torusSdk.triggerLogin(new SubVerifierDetails(this.selectedLoginVerifier.getTypeOfLogin(),
                             this.selectedLoginVerifier.getVerifier(),
                             this.selectedLoginVerifier.getClientId())
@@ -122,9 +121,6 @@ public class FirstFragment extends Fragment {
                     } else {
                         String publicAddress = torusLoginResponse.getPublicAddress();
                         this.privKey = torusLoginResponse.getPrivateKey();
-                        Log.d(MainActivity.class.getSimpleName(), publicAddress);
-                        Log.d("privkey",this.privKey.toString(16));
-//                        ((TextView) findViewById(R.id.output)).setText(publicAddress);
                         binding.resultView.setText(publicAddress);
                         try {
                             activity.tkeyProvider = new ServiceProvider(false, this.privKey.toString());
@@ -140,12 +136,9 @@ public class FirstFragment extends Fragment {
         binding.createThresholdKey.setOnClickListener(view1 -> {
             try {
                 PrivateKey postBoxKey = PrivateKey.generate();
-                Log.d("postkey", postBoxKey.hex);
-
                 MainActivity activity = ((MainActivity) requireActivity());
                 activity.tkeyStorage = new StorageLayer(false, "https://metadata.tor.us", 2);
-//                activity.tkeyProvider = new ServiceProvider(false, this.privKey.toString(16));
-                activity.tkeyProvider = new ServiceProvider(false, postBoxKey.hex);
+                activity.tkeyProvider = new ServiceProvider(false, this.privKey.toString(16));
                 activity.appKey = new ThresholdKey(null, null, activity.tkeyStorage, activity.tkeyProvider, null, null, false, false);
                 PrivateKey key = PrivateKey.generate();
                 activity.appKey.initialize(key.hex, null, false, false, result -> {
@@ -154,7 +147,6 @@ public class FirstFragment extends Fragment {
                             Exception e = ((com.web3auth.tkey.ThresholdKey.Common.Result.Error<KeyDetails>) result).exception;
                             Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e.toString(), Snackbar.LENGTH_LONG);
                             snackbar.show();
-                            Log.d("bug","here2");
 
                         });
                     } else if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
@@ -162,7 +154,6 @@ public class FirstFragment extends Fragment {
                         activity.appKey.reconstruct(reconstruct_result -> {
                             if (reconstruct_result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
                                 requireActivity().runOnUiThread(() -> {
-                                    Log.d("bug","here1");
                                     Exception e = ((com.web3auth.tkey.ThresholdKey.Common.Result.Error<KeyReconstructionDetails>) reconstruct_result).exception;
                                     Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e.toString(), Snackbar.LENGTH_LONG);
                                     snackbar.show();
@@ -179,7 +170,6 @@ public class FirstFragment extends Fragment {
                                         binding.createThresholdKey.setEnabled(false);
                                         binding.reconstructThresholdKey.setEnabled(true);
                                     } catch (RuntimeError e) {
-                                        Log.d("bug","hehe3");
                                         Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
                                         snackbar.show();
                                     }
