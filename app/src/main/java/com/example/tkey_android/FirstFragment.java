@@ -1,7 +1,6 @@
 package com.example.tkey_android;
 
 import android.os.Bundle;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -47,7 +46,7 @@ public class FirstFragment extends Fragment {
     private FragmentFirstBinding binding;
     private LoginVerifier selectedLoginVerifier;
     private CustomAuth torusSdk;
-    private BigInteger privKey = null;
+    private BigInteger postBoxKey = null;
 
     private final String[] allowedBrowsers = new String[]{
             "com.android.chrome", // Chrome stable
@@ -77,11 +76,11 @@ public class FirstFragment extends Fragment {
             binding.reconstructThresholdKey.setEnabled(false);
         }
         CustomAuthArgs args = new CustomAuthArgs("https://scripts.toruswallet.io/redirect.html", TorusNetwork.TESTNET, "torusapp://org.torusresearch.customauthandroid/redirect");
-        // args.setEnableOneKey(true);
 
         // Initialize CustomAuth
         this.torusSdk = new CustomAuth(args, (((MainActivity) requireActivity())));
 
+        binding.createThresholdKey.setEnabled(false);
         binding.generateNewShare.setEnabled(false);
         binding.deleteShare.setEnabled(false);
         binding.deleteSeedPhrase.setEnabled(false);
@@ -120,13 +119,9 @@ public class FirstFragment extends Fragment {
                         renderError(error);
                     } else {
                         String publicAddress = torusLoginResponse.getPublicAddress();
-                        this.privKey = torusLoginResponse.getPrivateKey();
+                        this.postBoxKey = torusLoginResponse.getPrivateKey();
                         binding.resultView.setText(publicAddress);
-                        try {
-                            activity.tkeyProvider = new ServiceProvider(false, this.privKey.toString());
-                        } catch (RuntimeError e) {
-                            throw new RuntimeException(e);
-                        }
+                        binding.createThresholdKey.setEnabled(true);
                     }
                 });
             } catch (Exception e) {
@@ -135,10 +130,9 @@ public class FirstFragment extends Fragment {
         });
         binding.createThresholdKey.setOnClickListener(view1 -> {
             try {
-                PrivateKey postBoxKey = PrivateKey.generate();
                 MainActivity activity = ((MainActivity) requireActivity());
                 activity.tkeyStorage = new StorageLayer(false, "https://metadata.tor.us", 2);
-                activity.tkeyProvider = new ServiceProvider(false, this.privKey.toString(16));
+                activity.tkeyProvider = new ServiceProvider(false, this.postBoxKey.toString(16));
                 activity.appKey = new ThresholdKey(null, null, activity.tkeyStorage, activity.tkeyProvider, null, null, false, false);
                 PrivateKey key = PrivateKey.generate();
                 activity.appKey.initialize(key.hex, null, false, false, result -> {
@@ -506,7 +500,6 @@ public class FirstFragment extends Fragment {
     }
 
     private void renderError(Throwable error) {
-        Log.e("result:error", "error", error);
         Throwable reason = Helpers.unwrapCompletionException(error);
         TextView textView = binding.resultView;
         if (reason instanceof UserCancelledException || reason instanceof NoAllowedBrowserFoundException)
