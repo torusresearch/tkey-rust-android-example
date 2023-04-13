@@ -1,5 +1,7 @@
 package com.example.tkey_android;
 
+import androidx.annotation.NonNull;
+
 import org.torusresearch.customauth.types.LoginType;
 
 public class LoginVerifier {
@@ -58,6 +60,7 @@ public class LoginVerifier {
     }
 
     @Override
+    @NonNull
     public String toString() {
         return name;
     }

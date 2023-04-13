@@ -113,6 +113,7 @@ public class FirstFragment extends Fragment {
                             .setPreferCustomTabs(true)
                             .setAllowedBrowsers(allowedBrowsers));
                 }
+                binding.createThresholdKey.setEnabled(true);
 
                 torusLoginResponseCf.whenComplete((torusLoginResponse, error) -> {
                     if (error != null) {
@@ -121,7 +122,8 @@ public class FirstFragment extends Fragment {
                         String publicAddress = torusLoginResponse.getPublicAddress();
                         this.postBoxKey = torusLoginResponse.getPrivateKey();
                         binding.resultView.setText(publicAddress);
-                        binding.createThresholdKey.setEnabled(true);
+                        // when I try to set enable true here, button does not enabled even if login succeeded
+//                        binding.createThresholdKey.setEnabled(true);
                     }
                 });
             } catch (Exception e) {
@@ -502,10 +504,13 @@ public class FirstFragment extends Fragment {
     private void renderError(Throwable error) {
         Throwable reason = Helpers.unwrapCompletionException(error);
         TextView textView = binding.resultView;
-        if (reason instanceof UserCancelledException || reason instanceof NoAllowedBrowserFoundException)
+        if (reason instanceof UserCancelledException || reason instanceof NoAllowedBrowserFoundException) {
             textView.setText(error.getMessage());
-        else
-            textView.setText("Something went wrong: " + error.getMessage());
+        }
+        else {
+            String errorMessage = getResources().getString(R.string.error_message, error.getMessage());
+            textView.setText(errorMessage);
+        }
     }
 
     @Override
