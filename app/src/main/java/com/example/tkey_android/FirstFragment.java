@@ -175,19 +175,14 @@ public class FirstFragment extends Fragment {
                 activity.appKey.deleteShare(index, result -> {
                     if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
                         requireActivity().runOnUiThread(() -> {
-                            Exception e = ((com.web3auth.tkey.ThresholdKey.Common.Result.Error<Boolean>) result).exception;
+                            Exception e = ((com.web3auth.tkey.ThresholdKey.Common.Result.Error<Void>) result).exception;
                             Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e.toString(), Snackbar.LENGTH_LONG);
                             snackbar.show();
                         });
                     } else if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
-                        Boolean deleted = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<Boolean>) result).data;
                         binding.deleteShare.setEnabled(true);
                         Snackbar snackbar;
-                        if (deleted) {
-                            snackbar = Snackbar.make(view1, index + " deleted", Snackbar.LENGTH_LONG);
-                        } else {
-                            snackbar = Snackbar.make(view1, index + " failed to be deleted", Snackbar.LENGTH_LONG);
-                        }
+                        snackbar = Snackbar.make(view1, index + " deleted", Snackbar.LENGTH_LONG);
                         snackbar.show();
                     }
                 });
