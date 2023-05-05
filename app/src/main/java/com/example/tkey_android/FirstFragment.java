@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ProgressBar;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
@@ -40,7 +41,6 @@ public class FirstFragment extends Fragment {
 
         binding = FragmentFirstBinding.inflate(inflater, container, false);
         return binding.getRoot();
-
     }
 
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
@@ -330,6 +330,42 @@ public class FirstFragment extends Fragment {
             } catch (RuntimeError e) {
                 throw new RuntimeException(e);
             }
+        });
+
+        binding.resetAccount.setOnClickListener(view1 -> {
+            MainActivity activity = ((MainActivity) requireActivity());
+            ProgressBar pb = binding.resetAccountProgress;
+            pb.setVisibility(View.VISIBLE);
+            try {
+                ArrayList<String> indexes = activity.appKey.getShareIndexes();
+                String index = indexes.get(indexes.size() - 1);
+                activity.appKey.deleteShare(index, result -> {
+                    if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
+                        requireActivity().runOnUiThread(() -> {
+                            Exception e = ((com.web3auth.tkey.ThresholdKey.Common.Result.Error<Boolean>) result).exception;
+                            Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e.getMessage(), Snackbar.LENGTH_LONG);
+                            snackbar.show();
+                        });
+                    } else if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
+                        Boolean deleted = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<Boolean>) result).data;
+                        binding.resetAccount.setEnabled(true);
+                        Snackbar snackbar;
+                        if (deleted) {
+                            snackbar = Snackbar.make(view1, index + " deleted", Snackbar.LENGTH_LONG);
+                        } else {
+                            snackbar = Snackbar.make(view1, index + " failed to be deleted", Snackbar.LENGTH_LONG);
+                        }
+                        snackbar.show();
+                    }
+                });
+            } catch (RuntimeError e) {
+                throw new RuntimeException(e);
+            } catch (JSONException e) {
+                throw new RuntimeException(e);
+            } finally {
+                pb.setVisibility(View.GONE);
+            }
+
         });
 
         binding.deleteSeedPhrase.setOnClickListener(view1 -> {
