@@ -64,6 +64,7 @@ public class FirstFragment extends Fragment {
             try {
                 PrivateKey postBoxKey = PrivateKey.generate();
                 MainActivity activity = ((MainActivity) requireActivity());
+                activity.postboxKey = postBoxKey.hex;
                 activity.tkeyStorage = new StorageLayer(false, "https://metadata.tor.us", 2);
                 activity.tkeyProvider = new ServiceProvider(false, postBoxKey.hex);
                 activity.appKey = new ThresholdKey(null, null, activity.tkeyStorage, activity.tkeyProvider, null, null, false, false);
@@ -168,30 +169,17 @@ public class FirstFragment extends Fragment {
         });
 
         binding.deleteShare.setOnClickListener(view1 -> {
-            try {
+           try {
                 MainActivity activity = ((MainActivity) requireActivity());
-                ArrayList<String> indexes = activity.appKey.getShareIndexes();
-                String index = indexes.get(indexes.size() - 1);
-                activity.appKey.deleteShare(index, result -> {
-                    if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
-                        requireActivity().runOnUiThread(() -> {
-                            Exception e = ((com.web3auth.tkey.ThresholdKey.Common.Result.Error<Boolean>) result).exception;
-                            Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e.toString(), Snackbar.LENGTH_LONG);
-                            snackbar.show();
-                        });
-                    } else if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
-                        Boolean deleted = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<Boolean>) result).data;
-                        binding.deleteShare.setEnabled(true);
-                        Snackbar snackbar;
-                        if (deleted) {
-                            snackbar = Snackbar.make(view1, index + " deleted", Snackbar.LENGTH_LONG);
-                        } else {
-                            snackbar = Snackbar.make(view1, index + " failed to be deleted", Snackbar.LENGTH_LONG);
-                        }
-                        snackbar.show();
-                    }
+                StorageLayer temp_sl = new StorageLayer(false, "https://metadata.tor.us", 2);
+                ServiceProvider temp_sp = new ServiceProvider(false, activity.postboxKey);
+                ThresholdKey temp_key = new ThresholdKey(null, null, temp_sl, temp_sp, null, null, false, false);
+
+                temp_key.storage_layer_set_metadata(null,"", result -> {
+
                 });
-            } catch (RuntimeError | JSONException e) {
+
+            } catch (RuntimeError e) {
                 Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
                 snackbar.show();
             }
@@ -342,19 +330,14 @@ public class FirstFragment extends Fragment {
                 activity.appKey.deleteShare(index, result -> {
                     if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
                         requireActivity().runOnUiThread(() -> {
-                            Exception e = ((com.web3auth.tkey.ThresholdKey.Common.Result.Error<Boolean>) result).exception;
+                            Exception e = ((com.web3auth.tkey.ThresholdKey.Common.Result.Error<Void>) result).exception;
                             Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e.getMessage(), Snackbar.LENGTH_LONG);
                             snackbar.show();
                         });
                     } else if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
-                        Boolean deleted = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<Boolean>) result).data;
                         binding.resetAccount.setEnabled(true);
                         Snackbar snackbar;
-                        if (deleted) {
-                            snackbar = Snackbar.make(view1, index + " deleted", Snackbar.LENGTH_LONG);
-                        } else {
-                            snackbar = Snackbar.make(view1, index + " failed to be deleted", Snackbar.LENGTH_LONG);
-                        }
+                        snackbar = Snackbar.make(view1, index + " deleted", Snackbar.LENGTH_LONG);
                         snackbar.show();
                     }
                 });
