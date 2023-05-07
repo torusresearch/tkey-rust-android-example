@@ -348,15 +348,18 @@ public class FirstFragment extends Fragment {
                             snackbar.show();
                         });
                     } else if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
-                        ((MainActivity) requireActivity()).resetState();
-//                        binding.createThresholdKey.setEnabled(true);
-//                        binding.reconstructThresholdKey.setEnabled(false);
-//
-//                        binding.generateNewShare.setEnabled(false);
-//                        binding.deleteShare.setEnabled(false);
-//                        binding.deleteSeedPhrase.setEnabled(false);
-                        Snackbar snackbar = Snackbar.make(view1, "Account reset successful", Snackbar.LENGTH_LONG);
-                        snackbar.show();
+                        requireActivity().runOnUiThread(() -> {
+                            ((MainActivity) requireActivity()).resetState();
+                            binding.createThresholdKey.setEnabled(true);
+                            binding.reconstructThresholdKey.setEnabled(false);
+                            binding.generateNewShare.setEnabled(false);
+                            binding.deleteShare.setEnabled(false);
+                            binding.deleteSeedPhrase.setEnabled(false);
+                            binding.resultView.setText("");
+                            Snackbar snackbar = Snackbar.make(view1, "Account reset successful", Snackbar.LENGTH_LONG);
+                            snackbar.show();
+                        });
+
                     }
                 });
 
