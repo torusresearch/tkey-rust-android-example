@@ -32,6 +32,13 @@ public class MainActivity extends AppCompatActivity {
 
     public String postboxKey;
 
+    public void resetState() {
+        this.appKey = null;
+        this.postboxKey = null;
+        this.tkeyProvider = null;
+        this.tkeyStorage = null;
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

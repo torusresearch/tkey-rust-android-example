@@ -340,12 +340,28 @@ public class FirstFragment extends Fragment {
                 ServiceProvider temp_sp = new ServiceProvider(false, activity.postboxKey);
                 ThresholdKey temp_key = new ThresholdKey(null, null, temp_sl, temp_sp, null, null, false, false);
 
-                temp_key.storage_layer_set_metadata(null,"", result -> {
-
+                temp_key.storage_layer_set_metadata(activity.postboxKey, "{ \"message\": \"KEY_NOT_FOUND\" }", result -> {
+                    if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
+                        requireActivity().runOnUiThread(() -> {
+                            Exception e = ((com.web3auth.tkey.ThresholdKey.Common.Result.Error<Void>) result).exception;
+                            Snackbar snackbar = Snackbar.make(view1, "A problem occurred here: " + e.toString(), Snackbar.LENGTH_LONG);
+                            snackbar.show();
+                        });
+                    } else if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
+                        ((MainActivity) requireActivity()).resetState();
+//                        binding.createThresholdKey.setEnabled(true);
+//                        binding.reconstructThresholdKey.setEnabled(false);
+//
+//                        binding.generateNewShare.setEnabled(false);
+//                        binding.deleteShare.setEnabled(false);
+//                        binding.deleteSeedPhrase.setEnabled(false);
+                        Snackbar snackbar = Snackbar.make(view1, "Account reset successful", Snackbar.LENGTH_LONG);
+                        snackbar.show();
+                    }
                 });
 
             } catch (RuntimeError e) {
-                Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
+                Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e.getMessage(), Snackbar.LENGTH_LONG);
                 snackbar.show();
             }
         });
