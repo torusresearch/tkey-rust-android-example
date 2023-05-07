@@ -342,14 +342,14 @@ public class FirstFragment extends Fragment {
 
                 temp_key.storage_layer_set_metadata(activity.postboxKey, "{ \"message\": \"KEY_NOT_FOUND\" }", result -> {
                     if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
-                        requireActivity().runOnUiThread(() -> {
+                        activity.runOnUiThread(() -> {
                             Exception e = ((com.web3auth.tkey.ThresholdKey.Common.Result.Error<Void>) result).exception;
                             Snackbar snackbar = Snackbar.make(view1, "A problem occurred here: " + e.toString(), Snackbar.LENGTH_LONG);
                             snackbar.show();
                         });
                     } else if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
-                        requireActivity().runOnUiThread(() -> {
-                            ((MainActivity) requireActivity()).resetState();
+                        activity.runOnUiThread(() -> {
+                            activity.resetState();
                             binding.createThresholdKey.setEnabled(true);
                             binding.reconstructThresholdKey.setEnabled(false);
                             binding.generateNewShare.setEnabled(false);
