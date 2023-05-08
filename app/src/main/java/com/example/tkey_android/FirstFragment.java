@@ -428,7 +428,8 @@ public class FirstFragment extends Fragment {
                     }
                 });
             } catch (RuntimeError e) {
-                throw new RuntimeException(e);
+                Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e.getMessage(), Snackbar.LENGTH_LONG);
+                snackbar.show();
             }
         });
 
