@@ -34,7 +34,6 @@ public class MainActivity extends AppCompatActivity {
 
     public void resetState() {
         this.appKey = null;
-        this.postboxKey = null;
         this.tkeyProvider = null;
         this.tkeyStorage = null;
     }
