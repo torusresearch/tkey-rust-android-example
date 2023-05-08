@@ -106,7 +106,8 @@ public class FirstFragment extends Fragment {
                     }
                 });
             } catch (RuntimeError e) {
-                throw new RuntimeException(e);
+                Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
+                snackbar.show();
             }
         });
 
@@ -134,7 +135,8 @@ public class FirstFragment extends Fragment {
                     }
                 });
             } catch (Exception e) {
-                throw new RuntimeException(e);
+                Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
+                snackbar.show();
             }
         });
 
@@ -162,7 +164,8 @@ public class FirstFragment extends Fragment {
                     }
                 });
             } catch (Exception e) {
-                throw new RuntimeException(e);
+                Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
+                snackbar.show();
             }
         });
 
@@ -186,10 +189,9 @@ public class FirstFragment extends Fragment {
                         snackbar.show();
                     }
                 });
-            } catch (RuntimeError e) {
-                throw new RuntimeException(e);
-            } catch (JSONException e) {
-                throw new RuntimeException(e);
+            } catch (RuntimeError | JSONException e) {
+                Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
+                snackbar.show();
             } finally {
                 pb.setVisibility(View.GONE);
             }
@@ -220,7 +222,8 @@ public class FirstFragment extends Fragment {
                     }
                 });
             } catch (Exception e) {
-                throw new RuntimeException(e);
+                Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
+                snackbar.show();
             }
         });
 
@@ -254,7 +257,8 @@ public class FirstFragment extends Fragment {
                     }
                 });
             } catch (Exception e) {
-                throw new RuntimeException(e);
+                Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
+                snackbar.show();
             }
         });
 
@@ -264,7 +268,8 @@ public class FirstFragment extends Fragment {
                 Snackbar snackbar = Snackbar.make(view1, "Password currently is" + answer, Snackbar.LENGTH_LONG);
                 snackbar.show();
             } catch (RuntimeError e) {
-                throw new RuntimeException(e);
+                Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
+                snackbar.show();
             }
         });
 
@@ -320,7 +325,8 @@ public class FirstFragment extends Fragment {
                 Snackbar snackbar = Snackbar.make(view1, phrases, Snackbar.LENGTH_LONG);
                 snackbar.show();
             } catch (RuntimeError e) {
-                throw new RuntimeException(e);
+                Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
+                snackbar.show();
             }
         });
 
@@ -381,35 +387,34 @@ public class FirstFragment extends Fragment {
                     }
                 });
             } catch (Exception e) {
-                throw new RuntimeException(e);
+                Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
+                snackbar.show();
             }
         });
 
-        binding.exportShare.setOnClickListener(view1 -> {
-            activity.appKey.generateNewShare(result -> {
-                if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
-                    requireActivity().runOnUiThread(() -> {
-                        Exception e = ((com.web3auth.tkey.ThresholdKey.Common.Result.Error<GenerateShareStoreResult>) result).exception;
-                        Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e.toString(), Snackbar.LENGTH_LONG);
+        binding.exportShare.setOnClickListener(view1 -> activity.appKey.generateNewShare(result -> {
+            if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
+                requireActivity().runOnUiThread(() -> {
+                    Exception e = ((com.web3auth.tkey.ThresholdKey.Common.Result.Error<GenerateShareStoreResult>) result).exception;
+                    Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e.toString(), Snackbar.LENGTH_LONG);
+                    snackbar.show();
+                });
+            } else if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
+                requireActivity().runOnUiThread(() -> {
+                    try {
+                        GenerateShareStoreResult shareStoreResult = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<GenerateShareStoreResult>) result).data;
+                        String index = shareStoreResult.getIndex();
+                        String share = activity.appKey.outputShare(index, null);
+                        String serialized = ShareSerializationModule.serializeShare(activity.appKey, share, null);
+                        Snackbar snackbar = Snackbar.make(view1, "Serialization result: " + serialized, Snackbar.LENGTH_LONG);
                         snackbar.show();
-                    });
-                } else if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
-                    requireActivity().runOnUiThread(() -> {
-                        try {
-                            GenerateShareStoreResult shareStoreResult = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<GenerateShareStoreResult>) result).data;
-                            String index = shareStoreResult.getIndex();
-                            String share = activity.appKey.outputShare(index, null);
-                            String serialized = ShareSerializationModule.serializeShare(activity.appKey, share, null);
-                            Snackbar snackbar = Snackbar.make(view1, "Serialization result: " + serialized, Snackbar.LENGTH_LONG);
-                            snackbar.show();
-                        } catch (RuntimeError e) {
-                            Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
-                            snackbar.show();
-                        }
-                    });
-                }
-            });
-        });
+                    } catch (RuntimeError e) {
+                        Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
+                        snackbar.show();
+                    }
+                });
+            }
+        }));
 
         binding.setPrivateKey.setOnClickListener(view1 -> {
             try {
@@ -428,7 +433,7 @@ public class FirstFragment extends Fragment {
                     }
                 });
             } catch (RuntimeError e) {
-                Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e.getMessage(), Snackbar.LENGTH_LONG);
+                Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
                 snackbar.show();
             }
         });
@@ -439,7 +444,8 @@ public class FirstFragment extends Fragment {
                 Snackbar snackbar = Snackbar.make(view1, key, Snackbar.LENGTH_LONG);
                 snackbar.show();
             } catch (RuntimeError e) {
-                throw new RuntimeException(e);
+                Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
+                snackbar.show();
             }
         });
 
