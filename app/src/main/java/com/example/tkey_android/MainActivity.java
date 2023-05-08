@@ -30,6 +30,14 @@ public class MainActivity extends AppCompatActivity {
     public StorageLayer tkeyStorage;
     public ServiceProvider tkeyProvider;
 
+    public String postboxKey;
+
+    public void resetState() {
+        this.appKey = null;
+        this.tkeyProvider = null;
+        this.tkeyStorage = null;
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

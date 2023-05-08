@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ProgressBar;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
@@ -40,19 +41,22 @@ public class FirstFragment extends Fragment {
 
         binding = FragmentFirstBinding.inflate(inflater, container, false);
         return binding.getRoot();
-
     }
 
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        if (((MainActivity) requireActivity()).appKey != null) {
-            binding.reconstructThresholdKey.setEnabled(false);
-            binding.createThresholdKey.setEnabled(true);
+        MainActivity activity = ((MainActivity) requireActivity());
 
-        } else {
-            binding.createThresholdKey.setEnabled(true);
-            binding.reconstructThresholdKey.setEnabled(false);
+        try {
+            PrivateKey postBoxKey = PrivateKey.generate();
+            activity.postboxKey = postBoxKey.hex;
+        } catch (RuntimeError e) {
+            // Exit the app
+            throw new RuntimeException(e);
         }
+
+        binding.createThresholdKey.setEnabled(true);
+        binding.reconstructThresholdKey.setEnabled(false);
         binding.generateNewShare.setEnabled(false);
         binding.deleteShare.setEnabled(false);
         binding.deleteSeedPhrase.setEnabled(false);
@@ -62,13 +66,10 @@ public class FirstFragment extends Fragment {
 
         binding.createThresholdKey.setOnClickListener(view1 -> {
             try {
-                PrivateKey postBoxKey = PrivateKey.generate();
-                MainActivity activity = ((MainActivity) requireActivity());
                 activity.tkeyStorage = new StorageLayer(false, "https://metadata.tor.us", 2);
-                activity.tkeyProvider = new ServiceProvider(false, postBoxKey.hex);
+                activity.tkeyProvider = new ServiceProvider(false, activity.postboxKey);
                 activity.appKey = new ThresholdKey(null, null, activity.tkeyStorage, activity.tkeyProvider, null, null, false, false);
-                PrivateKey key = PrivateKey.generate();
-                activity.appKey.initialize(key.hex, null, false, false, result -> {
+                activity.appKey.initialize(activity.postboxKey, null, false, false, result -> {
                     if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
                         requireActivity().runOnUiThread(() -> {
                             Exception e = ((com.web3auth.tkey.ThresholdKey.Common.Result.Error<KeyDetails>) result).exception;
@@ -105,13 +106,13 @@ public class FirstFragment extends Fragment {
                     }
                 });
             } catch (RuntimeError e) {
-                throw new RuntimeException(e);
+                Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
+                snackbar.show();
             }
         });
 
         binding.reconstructThresholdKey.setOnClickListener(view1 -> {
             try {
-                MainActivity activity = ((MainActivity) requireActivity());
                 activity.appKey.reconstruct(result -> {
                     if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
                         requireActivity().runOnUiThread(() -> {
@@ -134,13 +135,13 @@ public class FirstFragment extends Fragment {
                     }
                 });
             } catch (Exception e) {
-                throw new RuntimeException(e);
+                Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
+                snackbar.show();
             }
         });
 
         binding.generateNewShare.setOnClickListener(view1 -> {
             try {
-                MainActivity activity = ((MainActivity) requireActivity());
                 activity.appKey.generateNewShare(result -> {
                     if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
                         requireActivity().runOnUiThread(() -> {
@@ -163,43 +164,41 @@ public class FirstFragment extends Fragment {
                     }
                 });
             } catch (Exception e) {
-                throw new RuntimeException(e);
+                Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
+                snackbar.show();
             }
         });
 
         binding.deleteShare.setOnClickListener(view1 -> {
+            ProgressBar pb = binding.resetAccountProgress;
+            pb.setVisibility(View.VISIBLE);
             try {
-                MainActivity activity = ((MainActivity) requireActivity());
                 ArrayList<String> indexes = activity.appKey.getShareIndexes();
                 String index = indexes.get(indexes.size() - 1);
                 activity.appKey.deleteShare(index, result -> {
                     if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
                         requireActivity().runOnUiThread(() -> {
-                            Exception e = ((com.web3auth.tkey.ThresholdKey.Common.Result.Error<Boolean>) result).exception;
-                            Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e.toString(), Snackbar.LENGTH_LONG);
+                            Exception e = ((com.web3auth.tkey.ThresholdKey.Common.Result.Error<Void>) result).exception;
+                            Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e.getMessage(), Snackbar.LENGTH_LONG);
                             snackbar.show();
                         });
                     } else if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
-                        Boolean deleted = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<Boolean>) result).data;
-                        binding.deleteShare.setEnabled(true);
+                        binding.resetAccount.setEnabled(true);
                         Snackbar snackbar;
-                        if (deleted) {
-                            snackbar = Snackbar.make(view1, index + " deleted", Snackbar.LENGTH_LONG);
-                        } else {
-                            snackbar = Snackbar.make(view1, index + " failed to be deleted", Snackbar.LENGTH_LONG);
-                        }
+                        snackbar = Snackbar.make(view1, index + " deleted", Snackbar.LENGTH_LONG);
                         snackbar.show();
                     }
                 });
             } catch (RuntimeError | JSONException e) {
                 Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
                 snackbar.show();
+            } finally {
+                pb.setVisibility(View.GONE);
             }
         });
 
         binding.addPassword.setOnClickListener(view1 -> {
             try {
-                MainActivity activity = ((MainActivity) requireActivity());
                 SecurityQuestionModule.generateNewShare(activity.appKey, "What is the name of your cat?", "blublu", result -> {
                     if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
                         requireActivity().runOnUiThread(() -> {
@@ -223,13 +222,13 @@ public class FirstFragment extends Fragment {
                     }
                 });
             } catch (Exception e) {
-                throw new RuntimeException(e);
+                Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
+                snackbar.show();
             }
         });
 
         binding.changePassword.setOnClickListener(view1 -> {
             try {
-                MainActivity activity = ((MainActivity) requireActivity());
                 SecurityQuestionModule.changeSecurityQuestionAndAnswer(activity.appKey, "What is the name of your cat?", "Blublu", result -> {
                     if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
                         requireActivity().runOnUiThread(() -> {
@@ -258,23 +257,23 @@ public class FirstFragment extends Fragment {
                     }
                 });
             } catch (Exception e) {
-                throw new RuntimeException(e);
+                Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
+                snackbar.show();
             }
         });
 
         binding.showPassword.setOnClickListener(view1 -> {
             try {
-                MainActivity activity = ((MainActivity) requireActivity());
                 String answer = SecurityQuestionModule.getAnswer(activity.appKey);
                 Snackbar snackbar = Snackbar.make(view1, "Password currently is" + answer, Snackbar.LENGTH_LONG);
                 snackbar.show();
             } catch (RuntimeError e) {
-                throw new RuntimeException(e);
+                Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
+                snackbar.show();
             }
         });
 
         binding.setSeedPhrase.setOnClickListener(view1 -> {
-            MainActivity activity = ((MainActivity) requireActivity());
             String phrase = "seed sock milk update focus rotate barely fade car face mechanic mercy";
             SeedPhraseModule.setSeedPhrase(activity.appKey, "HD Key Tree", phrase, 0, result -> {
                 if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
@@ -297,7 +296,6 @@ public class FirstFragment extends Fragment {
         });
 
         binding.changeSeedPhrase.setOnClickListener(view1 -> {
-            MainActivity activity = ((MainActivity) requireActivity());
             String oldPhrase = "seed sock milk update focus rotate barely fade car face mechanic mercy";
             String newPhrase = "object brass success calm lizard science syrup planet exercise parade honey impulse";
             SeedPhraseModule.changePhrase(activity.appKey, oldPhrase, newPhrase, result -> {
@@ -323,18 +321,52 @@ public class FirstFragment extends Fragment {
 
         binding.getSeedPhrase.setOnClickListener(view1 -> {
             try {
-                MainActivity activity = ((MainActivity) requireActivity());
                 String phrases = SeedPhraseModule.getPhrases(activity.appKey);
                 Snackbar snackbar = Snackbar.make(view1, phrases, Snackbar.LENGTH_LONG);
                 snackbar.show();
             } catch (RuntimeError e) {
-                throw new RuntimeException(e);
+                Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
+                snackbar.show();
+            }
+        });
+
+        binding.resetAccount.setOnClickListener(view1 -> {
+            try {
+                StorageLayer temp_sl = new StorageLayer(false, "https://metadata.tor.us", 2);
+                ServiceProvider temp_sp = new ServiceProvider(false, activity.postboxKey);
+                ThresholdKey temp_key = new ThresholdKey(null, null, temp_sl, temp_sp, null, null, false, false);
+
+                temp_key.storage_layer_set_metadata(activity.postboxKey, "{ \"message\": \"KEY_NOT_FOUND\" }", result -> {
+                    if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
+                        activity.runOnUiThread(() -> {
+                            Exception e = ((com.web3auth.tkey.ThresholdKey.Common.Result.Error<Void>) result).exception;
+                            Snackbar snackbar = Snackbar.make(view1, "A problem occurred here: " + e.toString(), Snackbar.LENGTH_LONG);
+                            snackbar.show();
+                        });
+                    } else if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
+                        activity.runOnUiThread(() -> {
+                            activity.resetState();
+                            binding.createThresholdKey.setEnabled(true);
+                            binding.reconstructThresholdKey.setEnabled(false);
+                            binding.generateNewShare.setEnabled(false);
+                            binding.deleteShare.setEnabled(false);
+                            binding.deleteSeedPhrase.setEnabled(false);
+                            binding.resultView.setText("");
+                            Snackbar snackbar = Snackbar.make(view1, "Account reset successful", Snackbar.LENGTH_LONG);
+                            snackbar.show();
+                        });
+
+                    }
+                });
+
+            } catch (RuntimeError e) {
+                Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e.getMessage(), Snackbar.LENGTH_LONG);
+                snackbar.show();
             }
         });
 
         binding.deleteSeedPhrase.setOnClickListener(view1 -> {
             try {
-                MainActivity activity = ((MainActivity) requireActivity());
                 String newPhrase = "object brass success calm lizard science syrup planet exercise parade honey impulse";
                 SeedPhraseModule.deletePhrase(activity.appKey, newPhrase, result -> {
                     if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
@@ -355,42 +387,39 @@ public class FirstFragment extends Fragment {
                     }
                 });
             } catch (Exception e) {
-                throw new RuntimeException(e);
+                Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
+                snackbar.show();
             }
         });
 
-        binding.exportShare.setOnClickListener(view1 -> {
-            MainActivity activity = ((MainActivity) requireActivity());
-            activity.appKey.generateNewShare(result -> {
-                if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
-                    requireActivity().runOnUiThread(() -> {
-                        Exception e = ((com.web3auth.tkey.ThresholdKey.Common.Result.Error<GenerateShareStoreResult>) result).exception;
-                        Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e.toString(), Snackbar.LENGTH_LONG);
+        binding.exportShare.setOnClickListener(view1 -> activity.appKey.generateNewShare(result -> {
+            if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
+                requireActivity().runOnUiThread(() -> {
+                    Exception e = ((com.web3auth.tkey.ThresholdKey.Common.Result.Error<GenerateShareStoreResult>) result).exception;
+                    Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e.toString(), Snackbar.LENGTH_LONG);
+                    snackbar.show();
+                });
+            } else if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
+                requireActivity().runOnUiThread(() -> {
+                    try {
+                        GenerateShareStoreResult shareStoreResult = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<GenerateShareStoreResult>) result).data;
+                        String index = shareStoreResult.getIndex();
+                        String share = activity.appKey.outputShare(index, null);
+                        String serialized = ShareSerializationModule.serializeShare(activity.appKey, share, null);
+                        Snackbar snackbar = Snackbar.make(view1, "Serialization result: " + serialized, Snackbar.LENGTH_LONG);
                         snackbar.show();
-                    });
-                } else if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
-                    requireActivity().runOnUiThread(() -> {
-                        try {
-                            GenerateShareStoreResult shareStoreResult = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<GenerateShareStoreResult>) result).data;
-                            String index = shareStoreResult.getIndex();
-                            String share = activity.appKey.outputShare(index, null);
-                            String serialized = ShareSerializationModule.serializeShare(activity.appKey, share, null);
-                            Snackbar snackbar = Snackbar.make(view1, "Serialization result: " + serialized, Snackbar.LENGTH_LONG);
-                            snackbar.show();
-                        } catch (RuntimeError e) {
-                            Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
-                            snackbar.show();
-                        }
-                    });
-                }
-            });
-        });
+                    } catch (RuntimeError e) {
+                        Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
+                        snackbar.show();
+                    }
+                });
+            }
+        }));
 
         binding.setPrivateKey.setOnClickListener(view1 -> {
             try {
-                MainActivity activity = ((MainActivity) requireActivity());
-                PrivateKey key = PrivateKey.generate();
-                PrivateKeysModule.setPrivateKey(activity.appKey, key.hex, "secp256k1n", result -> {
+                PrivateKey newKey = PrivateKey.generate();
+                PrivateKeysModule.setPrivateKey(activity.appKey, newKey.hex, "secp256k1n", result -> {
                     if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
                         requireActivity().runOnUiThread(() -> {
                             Exception e = ((com.web3auth.tkey.ThresholdKey.Common.Result.Error<Boolean>) result).exception;
@@ -404,24 +433,24 @@ public class FirstFragment extends Fragment {
                     }
                 });
             } catch (RuntimeError e) {
-                throw new RuntimeException(e);
+                Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
+                snackbar.show();
             }
         });
 
         binding.getPrivateKey.setOnClickListener(view1 -> {
             try {
-                MainActivity activity = ((MainActivity) requireActivity());
                 String key = PrivateKeysModule.getPrivateKeys(activity.appKey);
                 Snackbar snackbar = Snackbar.make(view1, key, Snackbar.LENGTH_LONG);
                 snackbar.show();
             } catch (RuntimeError e) {
-                throw new RuntimeException(e);
+                Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
+                snackbar.show();
             }
         });
 
         binding.getAccounts.setOnClickListener(view1 -> {
             try {
-                MainActivity activity = ((MainActivity) requireActivity());
                 ArrayList<String> accounts = PrivateKeysModule.getPrivateKeyAccounts(activity.appKey);
                 Snackbar snackbar = Snackbar.make(view1, accounts.toString(), Snackbar.LENGTH_LONG);
                 snackbar.show();
