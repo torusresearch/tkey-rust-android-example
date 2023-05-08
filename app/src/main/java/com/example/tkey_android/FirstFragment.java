@@ -1,5 +1,6 @@
 package com.example.tkey_android;
 
+import android.os.Build;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -7,6 +8,7 @@ import android.view.ViewGroup;
 import android.widget.ProgressBar;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.fragment.NavHostFragment;
 
@@ -27,11 +29,23 @@ import com.web3auth.tkey.ThresholdKey.ThresholdKey;
 
 import org.json.JSONException;
 
+import java.io.UnsupportedEncodingException;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.UnrecoverableEntryException;
 import java.util.ArrayList;
+
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 
 public class FirstFragment extends Fragment {
 
     private FragmentFirstBinding binding;
+    private static final String SAMPLE_ALIAS = "MYALIAS";
 
     @Override
     public View onCreateView(
@@ -43,6 +57,7 @@ public class FirstFragment extends Fragment {
         return binding.getRoot();
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.M)
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         MainActivity activity = ((MainActivity) requireActivity());
@@ -96,6 +111,13 @@ public class FirstFragment extends Fragment {
                                         binding.resultView.append("Required Shares" + details.getThreshold() + "\n");
                                         binding.createThresholdKey.setEnabled(false);
                                         binding.reconstructThresholdKey.setEnabled(true);
+
+
+                                        activity.keyChainInterface.save(SAMPLE_ALIAS, "helloWorld");
+                                        String text = activity.keyChainInterface.fetch(SAMPLE_ALIAS);
+                                        binding.resultView.append("retrievedText: " + text + "\n");
+
+
                                     } catch (RuntimeError e) {
                                         Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
                                         snackbar.show();

@@ -22,6 +22,11 @@ import com.web3auth.tkey.RuntimeError;
 import android.view.Menu;
 import android.view.MenuItem;
 
+import java.io.IOException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
+
 public class MainActivity extends AppCompatActivity {
 
     private AppBarConfiguration appBarConfiguration;
@@ -31,6 +36,8 @@ public class MainActivity extends AppCompatActivity {
     public ServiceProvider tkeyProvider;
 
     public String postboxKey;
+
+    public KeyChainInterface keyChainInterface;
 
     public void resetState() {
         this.appKey = null;
@@ -48,6 +55,9 @@ public class MainActivity extends AppCompatActivity {
         } catch (RuntimeError e) {
             throw new RuntimeException(e);
         }
+
+        keyChainInterface = new KeyChainInterface();
+
         new AlertDialog.Builder(MainActivity.this)
                 .setTitle("Native library version")
                 .setMessage(libversion)
