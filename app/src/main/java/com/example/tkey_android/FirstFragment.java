@@ -45,16 +45,6 @@ public class FirstFragment extends Fragment {
 
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-
-        PrivateKey postBoxKey = null;
-        try {
-            postBoxKey = PrivateKey.generate();
-        } catch (RuntimeError e) {
-        }
-        MainActivity activity = ((MainActivity) requireActivity());
-        activity.postboxKey = postBoxKey.hex;
-
-
         if (((MainActivity) requireActivity()).appKey != null) {
             binding.reconstructThresholdKey.setEnabled(false);
             binding.createThresholdKey.setEnabled(true);
