@@ -412,19 +412,24 @@ public class FirstFragment extends Fragment {
         });
 
         binding.setPrivateKey.setOnClickListener(view1 -> {
-            PrivateKeysModule.setPrivateKey(activity.appKey, activity.postboxKey, "secp256k1n", result -> {
-                if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
-                    requireActivity().runOnUiThread(() -> {
-                        Exception e = ((com.web3auth.tkey.ThresholdKey.Common.Result.Error<Boolean>) result).exception;
-                        Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e.toString(), Snackbar.LENGTH_LONG);
+            try {
+                PrivateKey newKey = PrivateKey.generate();
+                PrivateKeysModule.setPrivateKey(activity.appKey, newKey.hex, "secp256k1n", result -> {
+                    if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
+                        requireActivity().runOnUiThread(() -> {
+                            Exception e = ((com.web3auth.tkey.ThresholdKey.Common.Result.Error<Boolean>) result).exception;
+                            Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e.toString(), Snackbar.LENGTH_LONG);
+                            snackbar.show();
+                        });
+                    } else if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
+                        Boolean set = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<Boolean>) result).data;
+                        Snackbar snackbar = Snackbar.make(view1, "Set private key result: " + set, Snackbar.LENGTH_LONG);
                         snackbar.show();
-                    });
-                } else if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
-                    Boolean set = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<Boolean>) result).data;
-                    Snackbar snackbar = Snackbar.make(view1, "Set private key result: " + set, Snackbar.LENGTH_LONG);
-                    snackbar.show();
-                }
-            });
+                    }
+                });
+            } catch (RuntimeError e) {
+                throw new RuntimeException(e);
+            }
         });
 
         binding.getPrivateKey.setOnClickListener(view1 -> {
