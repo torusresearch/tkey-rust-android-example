@@ -45,27 +45,18 @@ public class FirstFragment extends Fragment {
 
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+        MainActivity activity = ((MainActivity) requireActivity());
 
-        PrivateKey postBoxKey = null;
         try {
-            postBoxKey = PrivateKey.generate();
+            PrivateKey postBoxKey = PrivateKey.generate();
+            activity.postboxKey = postBoxKey.hex;
         } catch (RuntimeError e) {
             // Exit the app
             throw new RuntimeException(e);
         }
-        MainActivity activity = ((MainActivity) requireActivity());
-        activity.postboxKey = postBoxKey.hex;
 
-        if (activity.appKey != null) {
-            binding.reconstructThresholdKey.setEnabled(false);
-            binding.createThresholdKey.setEnabled(true);
-
-        } else {
-            binding.createThresholdKey.setEnabled(true);
-            binding.reconstructThresholdKey.setEnabled(false);
-        }
-
-
+        binding.createThresholdKey.setEnabled(true);
+        binding.reconstructThresholdKey.setEnabled(false);
         binding.generateNewShare.setEnabled(false);
         binding.deleteShare.setEnabled(false);
         binding.deleteSeedPhrase.setEnabled(false);
