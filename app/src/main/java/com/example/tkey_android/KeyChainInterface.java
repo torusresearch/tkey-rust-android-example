@@ -50,4 +50,12 @@ public class KeyChainInterface {
             throw new RuntimeException(e);
         }
     }
+
+    void deleteEntry(String alias) {
+        try {
+            decryptor.deleteEntry(alias);
+        } catch (KeyStoreException e) {
+            throw new RuntimeException(e);
+        }
+    }
 }

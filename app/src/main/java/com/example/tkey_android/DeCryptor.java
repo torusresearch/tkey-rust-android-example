@@ -42,4 +42,8 @@ public class DeCryptor {
     private SecretKey getSecretKey(final String alias) throws UnrecoverableEntryException, KeyStoreException, NoSuchAlgorithmException {
         return ((KeyStore.SecretKeyEntry) keyStore.getEntry(alias, null)).getSecretKey();
     }
+
+    void deleteEntry(String alias) throws KeyStoreException {
+        keyStore.deleteEntry(alias);
+    }
 }
