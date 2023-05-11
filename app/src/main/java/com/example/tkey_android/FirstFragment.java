@@ -37,7 +37,6 @@ import java.util.concurrent.atomic.AtomicReference;
 public class FirstFragment extends Fragment {
 
     private FragmentFirstBinding binding;
-    private static final String SAMPLE_ALIAS = "MYALIAS";
 
     @Override
     public View onCreateView(
@@ -175,12 +174,6 @@ public class FirstFragment extends Fragment {
                                             binding.resultView.append("Required Shares" + details.getThreshold() + "\n");
                                             binding.createThresholdKey.setEnabled(false);
                                             binding.reconstructThresholdKey.setEnabled(true);
-
-
-                                            activity.keyChainInterface.save(SAMPLE_ALIAS, "helloWorld");
-                                            String text = activity.keyChainInterface.fetch(SAMPLE_ALIAS);
-                                            binding.resultView.append("retrievedText: " + text + "\n");
-
 
                                         } catch (RuntimeError e) {
                                             Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
