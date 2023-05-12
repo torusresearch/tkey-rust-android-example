@@ -112,11 +112,7 @@ public class FirstFragment extends Fragment {
                         KeyDetails details = ((Result.Success<KeyDetails>) result).data;
                         activity.appKey.reconstruct(reconstruct_result -> {
                             if (reconstruct_result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
-                                requireActivity().runOnUiThread(() -> {
-                                    Exception e = ((com.web3auth.tkey.ThresholdKey.Common.Result.Error<KeyReconstructionDetails>) reconstruct_result).exception;
-                                    Snackbar snackbar = Snackbar.make(view1, "A problem occurred while reconstructing key: " + e.toString(), Snackbar.LENGTH_LONG);
-                                    snackbar.show();
-                                });
+                                handleError((((Result.Error<KeyReconstructionDetails>) reconstruct_result).exception), "reconstructing key", view1);
                             } else if (reconstruct_result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
                                 KeyReconstructionDetails reconstructionDetails = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<KeyReconstructionDetails>) reconstruct_result).data;
                                 requireActivity().runOnUiThread(() -> {
