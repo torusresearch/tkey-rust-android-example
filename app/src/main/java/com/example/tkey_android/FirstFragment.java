@@ -78,43 +78,6 @@ public class FirstFragment extends Fragment {
         }
     }
 
-    private KeyReconstructionDetails reconstructKeyWithAvailableShares(View view) {
-        try {
-            MainActivity activity = ((MainActivity) requireActivity());
-            ArrayList<String> indexes = activity.appKey.getShareIndexes();
-            String deviceShareIndex = indexes.get(indexes.size() - 1);
-            String alias = deviceShareIndex;
-            AtomicReference<Result.Success<KeyReconstructionDetails>> details = null;
-//             fetch locally available share
-            String deviceShare = activity.keyChainInterface.fetch(alias);
-
-            Log.d("MainActivity", "Saved indexes: " + String.valueOf(indexes));
-            Log.d("MainActivity", "Saved alias: " + alias);
-            Log.d("MainActivity", "Saved deviceShare: " +  deviceShare);
-
-//            Try to Input share
-            activity.appKey.inputShare(deviceShare, null, input_share_result -> {
-                if(input_share_result instanceof Result.Error) {
-                    handleError(((Result.Error<Void>) input_share_result).exception, "input share", view);
-                } else if (input_share_result instanceof Result.Success) {
-//                    Try to reconstruct key
-                    activity.appKey.reconstruct(reconstruct_result_after_import -> {
-                        if(reconstruct_result_after_import instanceof Result.Error) {
-                            handleError(((Result.Error<KeyReconstructionDetails>) reconstruct_result_after_import).exception, "reconstruct key", view);
-                        } else if(reconstruct_result_after_import instanceof Result.Success) {
-                            details.set(((Result.Success<KeyReconstructionDetails>) reconstruct_result_after_import));
-                        }
-                    });
-                }
-            });
-            return details.get().data;
-        } catch (JSONException e) {
-            throw new RuntimeException(e);
-        } catch (RuntimeError e) {
-            throw new RuntimeException(e);
-        }
-    }
-
     @RequiresApi(api = Build.VERSION_CODES.M)
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
@@ -139,11 +102,6 @@ public class FirstFragment extends Fragment {
 
         binding.createThresholdKey.setOnClickListener(view1 -> {
             try {
-//                Flow:
-//                Initialize tkey
-//                Try to reconstruct key with available Share
-//                If that fails to try to reconstruct normally
-
                 activity.tkeyStorage = new StorageLayer(false, "https://metadata.tor.us", 2);
                 activity.tkeyProvider = new ServiceProvider(false, activity.postboxKey);
                 activity.appKey = new ThresholdKey(null, null, activity.tkeyStorage, activity.tkeyProvider, null, null, false, false);
@@ -151,39 +109,34 @@ public class FirstFragment extends Fragment {
                     if (result instanceof Result.Error) {
                         handleError(((Result.Error<KeyDetails>) result).exception, "initializing tkey", view1);
                     } else if (result instanceof Result.Success) {
-                        try {
-                            reconstructKeyWithAvailableShares(view1);
-                        } catch (RuntimeException ee) {
-                            ee.printStackTrace();
-                            KeyDetails details = ((Result.Success<KeyDetails>) result).data;
-                            activity.appKey.reconstruct(reconstruct_result -> {
-                                if (reconstruct_result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
-                                    requireActivity().runOnUiThread(() -> {
-                                        Exception e = ((com.web3auth.tkey.ThresholdKey.Common.Result.Error<KeyReconstructionDetails>) reconstruct_result).exception;
-                                        Snackbar snackbar = Snackbar.make(view1, "A problem occurred while reconstructing key: " + e.toString(), Snackbar.LENGTH_LONG);
-                                        snackbar.show();
-                                    });
-                                } else if (reconstruct_result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
-                                    KeyReconstructionDetails reconstructionDetails = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<KeyReconstructionDetails>) reconstruct_result).data;
-                                    requireActivity().runOnUiThread(() -> {
-                                        try {
-                                            binding.resultView.setText("");
-                                            binding.resultView.append("Final Key\n");
-                                            binding.resultView.append(reconstructionDetails.getKey() + "\n");
-                                            binding.resultView.append("Total Shares" + details.getTotalShares() + "\n");
-                                            binding.resultView.append("Required Shares" + details.getThreshold() + "\n");
-                                            binding.createThresholdKey.setEnabled(false);
-                                            binding.reconstructThresholdKey.setEnabled(true);
+                        KeyDetails details = ((Result.Success<KeyDetails>) result).data;
+                        activity.appKey.reconstruct(reconstruct_result -> {
+                            if (reconstruct_result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
+                                requireActivity().runOnUiThread(() -> {
+                                    Exception e = ((com.web3auth.tkey.ThresholdKey.Common.Result.Error<KeyReconstructionDetails>) reconstruct_result).exception;
+                                    Snackbar snackbar = Snackbar.make(view1, "A problem occurred while reconstructing key: " + e.toString(), Snackbar.LENGTH_LONG);
+                                    snackbar.show();
+                                });
+                            } else if (reconstruct_result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
+                                KeyReconstructionDetails reconstructionDetails = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<KeyReconstructionDetails>) reconstruct_result).data;
+                                requireActivity().runOnUiThread(() -> {
+                                    try {
+                                        binding.resultView.setText("");
+                                        binding.resultView.append("Final Key\n");
+                                        binding.resultView.append(reconstructionDetails.getKey() + "\n");
+                                        binding.resultView.append("Total Shares" + details.getTotalShares() + "\n");
+                                        binding.resultView.append("Required Shares" + details.getThreshold() + "\n");
+                                        binding.createThresholdKey.setEnabled(false);
+                                        binding.reconstructThresholdKey.setEnabled(true);
 
-                                        } catch (RuntimeError e) {
-                                            Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
-                                            snackbar.show();
-                                        }
-                                    });
-                                }
-                            });
-                            saveShareLocally(view1);
-                        }
+                                    } catch (RuntimeError e) {
+                                        Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
+                                        snackbar.show();
+                                    }
+                                });
+                            }
+                        });
+                        saveShareLocally(view1);
                     }
                 });
             } catch (RuntimeError e) {
@@ -194,30 +147,65 @@ public class FirstFragment extends Fragment {
 
         binding.reconstructThresholdKey.setOnClickListener(view1 -> {
             try {
-                activity.appKey.reconstruct(result -> {
-                    if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
-                        requireActivity().runOnUiThread(() -> {
-                            Exception e = ((Result.Error<KeyReconstructionDetails>) result).exception;
-                            Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e.toString(), Snackbar.LENGTH_LONG);
-                            snackbar.show();
-                        });
-                    } else if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
-                        requireActivity().runOnUiThread(() -> {
-                            try {
-                                KeyReconstructionDetails details = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<KeyReconstructionDetails>) result).data;
+                ArrayList<String> indexes = activity.appKey.getShareIndexes();
+                String deviceShareIndex = indexes.get(indexes.size() - 1);
+                String alias = deviceShareIndex;
+//            AtomicReference<Result.Success<KeyReconstructionDetails>> details = null;
+//             fetch locally available share
+                String deviceShare = activity.keyChainInterface.fetch(alias);
+
+                Log.d("MainActivity", "Saved indexes: " + String.valueOf(indexes));
+                Log.d("MainActivity", "Saved alias: " + alias);
+                Log.d("MainActivity", "Saved deviceShare: " +  deviceShare);
+
+//            Try to Input share
+                activity.appKey.inputShare(deviceShare, null, input_share_result -> {
+                    if(input_share_result instanceof Result.Error) {
+                        handleError(((Result.Error<Void>) input_share_result).exception, "input share", view1);
+                    } else if (input_share_result instanceof Result.Success) {
+//                    Try to reconstruct key
+                        activity.appKey.reconstruct(reconstruct_result_after_import -> {
+                            if(reconstruct_result_after_import instanceof Result.Error) {
+//                                handleError(((Result.Error<KeyReconstructionDetails>) reconstruct_result_after_import).exception, "reconstruct key", view1);
+//                                Try reconstructing normally
+                                activity.appKey.reconstruct(result -> {
+                                    if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
+                                        handleError(((Result.Error<KeyReconstructionDetails>) result).exception, "reconstruct key", view1);
+                                    } else if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
+                                        requireActivity().runOnUiThread(() -> {
+                                            try {
+                                                KeyReconstructionDetails details = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<KeyReconstructionDetails>) result).data;
+                                                binding.generateNewShare.setEnabled(true);
+                                                Snackbar snackbar = Snackbar.make(view1, details.getKey(), Snackbar.LENGTH_LONG);
+                                                snackbar.show();
+                                            } catch (RuntimeError e) {
+                                                Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
+                                                snackbar.show();
+                                            }
+                                        });
+                                    }
+                                });
+
+                            } else if(reconstruct_result_after_import instanceof Result.Success) {
+                                KeyReconstructionDetails details = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<KeyReconstructionDetails>) reconstruct_result_after_import).data;
                                 binding.generateNewShare.setEnabled(true);
-                                Snackbar snackbar = Snackbar.make(view1, details.getKey(), Snackbar.LENGTH_LONG);
+                                Snackbar snackbar = null;
+                                try {
+                                    snackbar = Snackbar.make(view1, details.getKey(), Snackbar.LENGTH_LONG);
+                                } catch (RuntimeError e) {
+                                    throw new RuntimeException(e);
+                                }
                                 snackbar.show();
-                            } catch (RuntimeError e) {
-                                Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
-                                snackbar.show();
+//                            details.set(((Result.Success<KeyReconstructionDetails>) reconstruct_result_after_import));
                             }
                         });
                     }
                 });
-            } catch (Exception e) {
-                Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
-                snackbar.show();
+//            return details.get().data;
+            } catch (JSONException e) {
+                throw new RuntimeException(e);
+            } catch (RuntimeError e) {
+                throw new RuntimeException(e);
             }
         });
 
@@ -428,7 +416,7 @@ public class FirstFragment extends Fragment {
                         activity.runOnUiThread(() -> {
                             activity.resetState();
                             binding.createThresholdKey.setEnabled(true);
-                            binding.reconstructThresholdKey.setEnabled(false);
+                            binding.reconstructThresholdKey.setEnabled(true);
                             binding.generateNewShare.setEnabled(false);
                             binding.deleteShare.setEnabled(false);
                             binding.deleteSeedPhrase.setEnabled(false);
