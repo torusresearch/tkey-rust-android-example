@@ -47,7 +47,8 @@ public class KeyChainInterface {
         try {
             return decryptor.decryptData(alias, encryptor.getEncryption(), encryptor.getIv());
         } catch (UnrecoverableEntryException | KeyStoreException | NoSuchPaddingException | NoSuchAlgorithmException | UnsupportedEncodingException | IllegalBlockSizeException | BadPaddingException | InvalidAlgorithmParameterException | InvalidKeyException e) {
-            throw new RuntimeException(e);
+//            throw new RuntimeException(e);
+            return null;
         }
     }
 
