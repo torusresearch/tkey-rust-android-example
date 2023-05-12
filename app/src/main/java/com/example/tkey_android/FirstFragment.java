@@ -142,18 +142,17 @@ public class FirstFragment extends Fragment {
 
         binding.reconstructThresholdKey.setOnClickListener(view1 -> {
             try {
+//                fetch locally available share
                 ArrayList<String> indexes = activity.appKey.getShareIndexes();
                 String deviceShareIndex = indexes.get(indexes.size() - 1);
                 String alias = deviceShareIndex;
-//            AtomicReference<Result.Success<KeyReconstructionDetails>> details = null;
-//             fetch locally available share
                 String deviceShare = activity.keyChainInterface.fetch(alias);
 
                 Log.d("MainActivity", "Saved indexes: " + String.valueOf(indexes));
                 Log.d("MainActivity", "Saved alias: " + alias);
                 Log.d("MainActivity", "Saved deviceShare: " +  deviceShare);
 
-//            Try to Input share
+//            Try to input local share
                 activity.appKey.inputShare(deviceShare, null, input_share_result -> {
                     if(input_share_result instanceof Result.Error) {
                         handleError(((Result.Error<Void>) input_share_result).exception, "input share", view1);
@@ -161,7 +160,6 @@ public class FirstFragment extends Fragment {
 //                    Try to reconstruct key
                         activity.appKey.reconstruct(reconstruct_result_after_import -> {
                             if(reconstruct_result_after_import instanceof Result.Error) {
-//                                handleError(((Result.Error<KeyReconstructionDetails>) reconstruct_result_after_import).exception, "reconstruct key", view1);
 //                                Try reconstructing normally
                                 activity.appKey.reconstruct(result -> {
                                     if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
@@ -191,7 +189,6 @@ public class FirstFragment extends Fragment {
                                     throw new RuntimeException(e);
                                 }
                                 snackbar.show();
-//                            details.set(((Result.Success<KeyReconstructionDetails>) reconstruct_result_after_import));
                             }
                         });
                     }
