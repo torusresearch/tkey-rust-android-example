@@ -393,9 +393,18 @@ public class FirstFragment extends Fragment {
 
         binding.resetAccount.setOnClickListener(view1 -> {
             try {
+//                delete locally stored share
+                ArrayList<String> indexes = activity.appKey.getShareIndexes();
+                String deviceShareIndex = indexes.get(indexes.size() - 1);
+                String alias = deviceShareIndex;
+
+                Log.d("MainActivity", "Deleting locally stored share " + alias );
+                activity.keyChainInterface.deleteEntry(alias);
+
                 StorageLayer temp_sl = new StorageLayer(false, "https://metadata.tor.us", 2);
                 ServiceProvider temp_sp = new ServiceProvider(false, activity.postboxKey);
                 ThresholdKey temp_key = new ThresholdKey(null, null, temp_sl, temp_sp, null, null, false, false);
+
 
                 temp_key.storage_layer_set_metadata(activity.postboxKey, "{ \"message\": \"KEY_NOT_FOUND\" }", result -> {
                     if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
@@ -420,7 +429,7 @@ public class FirstFragment extends Fragment {
                     }
                 });
 
-            } catch (RuntimeError e) {
+            } catch (RuntimeError | JSONException e) {
                 Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e.getMessage(), Snackbar.LENGTH_LONG);
                 snackbar.show();
             }
