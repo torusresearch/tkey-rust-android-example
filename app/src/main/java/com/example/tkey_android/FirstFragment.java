@@ -54,6 +54,15 @@ public class FirstFragment extends Fragment {
         });
     }
 
+    private String getAlias() throws JSONException, RuntimeError {
+//        TODO: When custom auth is implemented, alias should be `${userData.publicAddress}${deviceShare}` as per the ios example app.
+        MainActivity activity = ((MainActivity) requireActivity());
+        ArrayList<String> indexes = activity.appKey.getShareIndexes();
+        String deviceShareIndex = indexes.get(indexes.size() - 1);
+        String alias = deviceShareIndex;
+        return alias;
+    }
+
     @RequiresApi(api = Build.VERSION_CODES.M)
     private void saveShareLocally(View view) {
         try {
@@ -100,6 +109,12 @@ public class FirstFragment extends Fragment {
                 .navigate(R.id.action_FirstFragment_to_SecondFragment));
 
         binding.createThresholdKey.setOnClickListener(view1 -> {
+//            Logic:
+//            1. Create tkey.
+//            2. Fetch locally available shares
+//            3. If no shares, then assume new user and try initialize and reconstruct. If success, save share, if fail prompt to reset account.
+//            4. If shares are found, insert them into tkey and then try initialize and reconstruct. If success, all good, if fail then share is incorrect, go to prompt to reset account
+
             try {
                 activity.tkeyStorage = new StorageLayer(false, "https://metadata.tor.us", 2);
                 activity.tkeyProvider = new ServiceProvider(false, activity.postboxKey);
@@ -143,9 +158,7 @@ public class FirstFragment extends Fragment {
         binding.reconstructThresholdKey.setOnClickListener(view1 -> {
             try {
 //                fetch locally available share
-                ArrayList<String> indexes = activity.appKey.getShareIndexes();
-                String deviceShareIndex = indexes.get(indexes.size() - 1);
-                String alias = deviceShareIndex;
+                String alias = getAlias();
                 String deviceShare = activity.keyChainInterface.fetch(alias);
 
                 Log.d("MainActivity", "Saved indexes: " + String.valueOf(indexes));
@@ -394,9 +407,7 @@ public class FirstFragment extends Fragment {
         binding.resetAccount.setOnClickListener(view1 -> {
             try {
 //                delete locally stored share
-                ArrayList<String> indexes = activity.appKey.getShareIndexes();
-                String deviceShareIndex = indexes.get(indexes.size() - 1);
-                String alias = deviceShareIndex;
+               String alias = getAlias();
 
                 Log.d("MainActivity", "Deleting locally stored share " + alias );
                 activity.keyChainInterface.deleteEntry(alias);
