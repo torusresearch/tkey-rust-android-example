@@ -32,7 +32,6 @@ import com.web3auth.tkey.ThresholdKey.ThresholdKey;
 import org.json.JSONException;
 
 import java.util.ArrayList;
-import java.util.concurrent.atomic.AtomicReference;
 
 public class FirstFragment extends Fragment {
 
