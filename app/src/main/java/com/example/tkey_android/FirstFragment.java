@@ -59,8 +59,12 @@ public class FirstFragment extends Fragment {
         MainActivity activity = ((MainActivity) requireActivity());
         ArrayList<String> indexes = activity.appKey.getShareIndexes();
         String deviceShareIndex = indexes.get(indexes.size() - 1);
-        String alias = deviceShareIndex;
-        return alias;
+        if(deviceShareIndex == "1") {
+            return null;
+        } else {
+            String alias = deviceShareIndex;
+            return alias;
+        }
     }
 
     @RequiresApi(api = Build.VERSION_CODES.M)
@@ -70,6 +74,10 @@ public class FirstFragment extends Fragment {
             ArrayList<String> indexes = activity.appKey.getShareIndexes();
             String deviceShareIndex = indexes.get(indexes.size() - 1);
             String alias = deviceShareIndex;
+
+            if(deviceShareIndex == "1") {
+                throw new RuntimeException("Not able to read alias");
+            }
 
             // Save share in keychain
             String share = activity.appKey.outputShare(deviceShareIndex, null);
@@ -122,13 +130,15 @@ public class FirstFragment extends Fragment {
 //              1. Create tkey.
                 activity.appKey.initialize(activity.postboxKey, null, false, false, result -> {
                     if (result instanceof Result.Error) {
-                        displayError(((Result.Error<KeyDetails>) result).exception, "initializing tkey", view1);
+                        Exception ee = ((Result.Error<KeyDetails>) result).exception;
+                        ee.printStackTrace();
+                        displayError(ee, "initializing tkey", view1);
                     } else if (result instanceof Result.Success) {
                         try {
                             KeyDetails details = ((Result.Success<KeyDetails>) result).data;
 //              2. Fetch locally available shares
                             String alias = getAlias();
-                            String deviceShare = activity.keyChainInterface.fetch(alias);
+                            String deviceShare = alias == null ? null : activity.keyChainInterface.fetch(alias);
                             if(deviceShare == null) {
 //              3. If no shares, then assume new user and try initialize and reconstruct. If success, save share, if fail prompt to reset account.
                                 activity.appKey.reconstruct(reconstruct_result -> {

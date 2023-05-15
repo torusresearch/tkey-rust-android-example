@@ -46,7 +46,7 @@ public class KeyChainInterface {
     String fetch(String alias) {
         try {
             return decryptor.decryptData(alias, encryptor.getEncryption(), encryptor.getIv());
-        } catch (UnrecoverableEntryException | KeyStoreException | NoSuchPaddingException | NoSuchAlgorithmException | UnsupportedEncodingException | IllegalBlockSizeException | BadPaddingException | InvalidAlgorithmParameterException | InvalidKeyException e) {
+        } catch (RuntimeException | UnrecoverableEntryException | KeyStoreException | NoSuchPaddingException | NoSuchAlgorithmException | UnsupportedEncodingException | IllegalBlockSizeException | BadPaddingException | InvalidAlgorithmParameterException | InvalidKeyException e) {
 //            throw new RuntimeException(e);
             return null;
         }
