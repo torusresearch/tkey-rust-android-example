@@ -34,7 +34,6 @@ public class KeyChainInterface {
         }
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.M)
     void save(String alias, String textToSave) {
         try {
             encryptor.encryptText(alias, textToSave);
