@@ -67,7 +67,6 @@ public class FirstFragment extends Fragment {
         }
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.M)
     private void saveShareLocally(View view) {
         try {
             MainActivity activity = ((MainActivity) requireActivity());
@@ -90,11 +89,11 @@ public class FirstFragment extends Fragment {
             String text = activity.keyChainInterface.fetch(alias);
             Log.d("MainActivity", "retrieved: " + text);
         } catch (JSONException | RuntimeError e) {
+            Log.e("MainActivity", "saveShareLocally: ", e);
             displayError((Exception) e, "save share locally", view);
         }
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.M)
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         MainActivity activity = ((MainActivity) requireActivity());
