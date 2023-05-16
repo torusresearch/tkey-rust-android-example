@@ -36,6 +36,8 @@ import java.util.ArrayList;
 public class FirstFragment extends Fragment {
 
     private FragmentFirstBinding binding;
+//    TODO: set up unique alias for each tkey
+    private final String ALIAS = "ALIAS";
 
     @Override
     public View onCreateView(
@@ -54,39 +56,22 @@ public class FirstFragment extends Fragment {
         });
     }
 
-    private String getAlias() throws JSONException, RuntimeError {
-//        TODO: When custom auth is implemented, alias should be `${userData.publicAddress}${deviceShare}` as per the ios example app.
-        MainActivity activity = ((MainActivity) requireActivity());
-        ArrayList<String> indexes = activity.appKey.getShareIndexes();
-        String deviceShareIndex = indexes.get(indexes.size() - 1);
-        if(deviceShareIndex == "1") {
-            return null;
-        } else {
-            String alias = deviceShareIndex;
-            return alias;
-        }
-    }
-
     private void saveShareLocally(View view) {
         try {
             MainActivity activity = ((MainActivity) requireActivity());
             ArrayList<String> indexes = activity.appKey.getShareIndexes();
-            String deviceShareIndex = indexes.get(indexes.size() - 1);
-            String alias = deviceShareIndex;
-
-            if(deviceShareIndex == "1") {
-                throw new RuntimeException("Not able to read alias");
-            }
+            String index = indexes.get(indexes.size() - 1);
 
             // Save share in keychain
-            String share = activity.appKey.outputShare(deviceShareIndex, null);
+            String share = activity.appKey.outputShare(index, null);
 
             Log.d("MainActivity", "indexes: " + String.valueOf(indexes));
-            Log.d("MainActivity", "index: " +  deviceShareIndex);
+            Log.d("MainActivity", "index: " +  index);
             Log.d("MainActivity", "share: " + share);
-            Log.d("MainActivity", "alias: " + alias);
-            activity.keyChainInterface.save(alias, share);
-            String text = activity.keyChainInterface.fetch(alias);
+            Log.d("MainActivity", "alias: " + ALIAS);
+            activity.keyChainInterface.save(ALIAS, share);
+
+            String text = activity.keyChainInterface.fetch(ALIAS);
             Log.d("MainActivity", "retrieved: " + text);
         } catch (JSONException | RuntimeError e) {
             Log.e("MainActivity", "saveShareLocally: ", e);
@@ -117,91 +102,92 @@ public class FirstFragment extends Fragment {
 
         binding.createThresholdKey.setOnClickListener(view1 -> {
 //            Logic:
-//            1. Create tkey.
-//            2. Fetch locally available shares
-//            3. If no shares, then assume new user and try initialize and reconstruct. If success, save share, if fail prompt to reset account.
-//            4. If shares are found, insert them into tkey and then try initialize and reconstruct. If success, all good, if fail then share is incorrect, go to prompt to reset account
+//            1. Fetch locally available shares
+//            2. If no shares, then assume new user and try initialize and reconstruct. If success, save share, if fail prompt to reset account.
+//            3. If shares are found, insert them into tkey and then try reconstruct. If success, all good, if fail then share is incorrect, go to prompt to reset account
 
             try {
-                activity.tkeyStorage = new StorageLayer(false, "https://metadata.tor.us", 2);
-                activity.tkeyProvider = new ServiceProvider(false, activity.postboxKey);
-                activity.appKey = new ThresholdKey(null, null, activity.tkeyStorage, activity.tkeyProvider, null, null, false, false);
-//              1. Create tkey.
-                activity.appKey.initialize(activity.postboxKey, null, false, false, result -> {
-                    if (result instanceof Result.Error) {
-                        Exception ee = ((Result.Error<KeyDetails>) result).exception;
-                        ee.printStackTrace();
-                        displayError(ee, "initializing tkey", view1);
-                    } else if (result instanceof Result.Success) {
-                        try {
+
+//            1. Fetch locally available shares
+                String share = null;
+                try {
+                    share = activity.keyChainInterface.fetch(ALIAS);
+                } catch (RuntimeException e) {}
+                if(share == null) {
+//            2. If no shares, then assume new user and try initialize and reconstruct. If success, save share, if fail prompt to reset account.
+                    activity.tkeyStorage = new StorageLayer(false, "https://metadata.tor.us", 2);
+                    activity.tkeyProvider = new ServiceProvider(false, activity.postboxKey);
+                    activity.appKey = new ThresholdKey(null, null, activity.tkeyStorage, activity.tkeyProvider, null, null, false, false);
+                    activity.appKey.initialize(activity.postboxKey, null, false, false, result -> {
+
+                        if (result instanceof Result.Error) {
+                            Exception ee = ((Result.Error<KeyDetails>) result).exception;
+                            ee.printStackTrace();
+                            displayError(ee, "initializing tkey", view1);
+                        } else if (result instanceof Result.Success) {
                             KeyDetails details = ((Result.Success<KeyDetails>) result).data;
-//              2. Fetch locally available shares
-                            String alias = getAlias();
-                            String deviceShare = alias == null ? null : activity.keyChainInterface.fetch(alias);
-                            if(deviceShare == null) {
-//              3. If no shares, then assume new user and try initialize and reconstruct. If success, save share, if fail prompt to reset account.
-                                activity.appKey.reconstruct(reconstruct_result -> {
-                                    if (reconstruct_result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
-                                        displayError((((Result.Error<KeyReconstructionDetails>) reconstruct_result).exception), "reconstructing key", view1);
-                                    } else if (reconstruct_result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
-                                        KeyReconstructionDetails reconstructionDetails = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<KeyReconstructionDetails>) reconstruct_result).data;
-                                        requireActivity().runOnUiThread(() -> {
-                                            try {
-                                                binding.resultView.setText("");
-                                                binding.resultView.append("Final Key\n");
-                                                binding.resultView.append(reconstructionDetails.getKey() + "\n");
-                                                binding.resultView.append("Total Shares" + details.getTotalShares() + "\n");
-                                                binding.resultView.append("Required Shares" + details.getThreshold() + "\n");
-                                                binding.createThresholdKey.setEnabled(false);
-                                                binding.reconstructThresholdKey.setEnabled(true);
+                            activity.appKey.reconstruct(reconstruct_result -> {
+                                if (reconstruct_result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
+                                    displayError((((Result.Error<KeyReconstructionDetails>) reconstruct_result).exception), "reconstructing key", view1);
+                                } else if (reconstruct_result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
+                                    KeyReconstructionDetails reconstructionDetails = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<KeyReconstructionDetails>) reconstruct_result).data;
+                                    requireActivity().runOnUiThread(() -> {
+                                        try {
+                                            binding.resultView.setText("");
+                                            binding.resultView.append("Final Key\n");
+                                            binding.resultView.append(reconstructionDetails.getKey() + "\n");
+                                            binding.resultView.append("Total Shares" + details.getTotalShares() + "\n");
+                                            binding.resultView.append("Required Shares" + details.getThreshold() + "\n");
+                                            binding.createThresholdKey.setEnabled(true);
+                                            binding.reconstructThresholdKey.setEnabled(true);
 
-                                            } catch (RuntimeError e) {
-                                                Snackbar snackbar = Snackbar.make(view1, "Please reset account, a problem occurred: " + e, Snackbar.LENGTH_LONG);
-                                                snackbar.show();
-                                            }
-                                        });
-                                    }
-                                });
-                                saveShareLocally(view1);
-                            } else {
-//              4. If shares are found, insert them into tkey and then try initialize and reconstruct. If success, all good, if fail then share is incorrect, go to prompt to reset account
-                                activity.appKey.inputShare(deviceShare, null, input_share_result -> {
-                                    if(input_share_result instanceof Result.Error) {
-                                        displayError(((Result.Error<Void>) input_share_result).exception, "input share", view1);
-                                    } else if (input_share_result instanceof Result.Success) {
-                                        activity.appKey.reconstruct(reconstruct_result_after_import -> {
-                                            if(reconstruct_result_after_import instanceof Result.Error) {
-                                                displayError(((Result.Error<KeyReconstructionDetails>) reconstruct_result_after_import).exception, "", view1);
-                                            } else if(reconstruct_result_after_import instanceof Result.Success) {
-                                                KeyReconstructionDetails reconstructionDetails = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<KeyReconstructionDetails>) reconstruct_result_after_import).data;
-                                                binding.generateNewShare.setEnabled(true);
-                                                requireActivity().runOnUiThread(() -> {
-                                                    try {
-                                                        binding.resultView.setText("");
-                                                        binding.resultView.append("Final Key\n");
-                                                        binding.resultView.append(reconstructionDetails.getKey() + "\n");
-                                                        binding.resultView.append("Total Shares" + details.getTotalShares() + "\n");
-                                                        binding.resultView.append("Required Shares" + details.getThreshold() + "\n");
-                                                        binding.createThresholdKey.setEnabled(false);
-                                                        binding.reconstructThresholdKey.setEnabled(true);
 
-                                                    } catch (RuntimeError e) {
-                                                        Snackbar snackbar = Snackbar.make(view1, "Please reset account, a problem occurred: " + e, Snackbar.LENGTH_LONG);
-                                                        snackbar.show();
-                                                    }
-                                                });
-                                            }
-                                        });
-                                    }
-                                });
-                            }
 
-                        }catch (JSONException | RuntimeError e) {
-                            displayError((Exception) e, "get alias", view1);
+                                        } catch (RuntimeError e) {
+                                            Snackbar snackbar = Snackbar.make(view1, "Please reset account, a problem occurred: " + e, Snackbar.LENGTH_LONG);
+                                            snackbar.show();
+                                        }
+                                    });
+                                }
+                            });
+                            saveShareLocally(view1);
                         }
-                    }
-                });
-            } catch (RuntimeError e) {
+                    });
+                } else {
+//            3. If shares are found, insert them into tkey and then try reconstruct. If success, all good, if fail then share is incorrect, go to prompt to reset account
+                    activity.appKey.inputShare(share, null, input_share_result -> {
+                        if(input_share_result instanceof Result.Error) {
+                            displayError(((Result.Error<Void>) input_share_result).exception, "input share", view1);
+                        } else if (input_share_result instanceof Result.Success) {
+                            activity.appKey.reconstruct(reconstruct_result_after_import -> {
+                                if(reconstruct_result_after_import instanceof Result.Error) {
+                                    displayError(((Result.Error<KeyReconstructionDetails>) reconstruct_result_after_import).exception, "", view1);
+                                } else if(reconstruct_result_after_import instanceof Result.Success) {
+                                    KeyReconstructionDetails reconstructionDetails = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<KeyReconstructionDetails>) reconstruct_result_after_import).data;
+                                    binding.generateNewShare.setEnabled(true);
+                                    requireActivity().runOnUiThread(() -> {
+                                        try {
+                                            binding.resultView.setText("");
+                                            binding.resultView.append("Final Key\n");
+                                            binding.resultView.append(reconstructionDetails.getKey() + "\n");
+//                                            binding.resultView.append("Total Shares" + details.getTotalShares() + "\n");
+//                                            binding.resultView.append("Required Shares" + details.getThreshold() + "\n");
+                                            binding.createThresholdKey.setEnabled(false);
+                                            binding.reconstructThresholdKey.setEnabled(true);
+
+                                        } catch (RuntimeError e) {
+                                            Snackbar snackbar = Snackbar.make(view1, "Please reset account, a problem occurred: " + e, Snackbar.LENGTH_LONG);
+                                            snackbar.show();
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                    });
+
+                }
+            } catch (RuntimeError | RuntimeException e) {
+                e.printStackTrace();
                 Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
                 snackbar.show();
             }
@@ -420,10 +406,9 @@ public class FirstFragment extends Fragment {
         binding.resetAccount.setOnClickListener(view1 -> {
             try {
 //                delete locally stored share
-               String alias = getAlias();
 
-                Log.d("MainActivity", "Deleting locally stored share " + alias );
-                activity.keyChainInterface.deleteEntry(alias);
+                Log.d("MainActivity", "Deleting locally stored share " + ALIAS );
+                activity.keyChainInterface.deleteEntry(ALIAS);
 
                 StorageLayer temp_sl = new StorageLayer(false, "https://metadata.tor.us", 2);
                 ServiceProvider temp_sp = new ServiceProvider(false, activity.postboxKey);
@@ -453,7 +438,7 @@ public class FirstFragment extends Fragment {
                     }
                 });
 
-            } catch (RuntimeError | JSONException e) {
+            } catch (RuntimeError e) {
                 Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e.getMessage(), Snackbar.LENGTH_LONG);
                 snackbar.show();
             }

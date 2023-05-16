@@ -7,6 +7,8 @@ import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
 
 
+import androidx.annotation.RequiresApi;
+
 import java.io.UnsupportedEncodingException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
@@ -23,7 +25,7 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 
 public class EnCryptor {
-    private static final String TRANSFORMATION = "AES/CBC/PKCS5Padding"; // pkcs5 padding,  16 bytes iv,
+    private static final String TRANSFORMATION =  "AES/GCM/NoPadding"; // "AES/CBC/PKCS5Padding"; // pkcs5 padding,  16 bytes iv,
 
     private static final String TRANSFORMATION_OLDER_API = "RSA/ECB/PKCS1Padding"; // pkcs5 padding,  16 bytes iv,
 
@@ -56,17 +58,17 @@ public class EnCryptor {
         return keyPair;
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.M)
     private SecretKey getSecretKey(final String alias) throws NoSuchAlgorithmException, NoSuchProviderException, InvalidAlgorithmParameterException {
         final KeyGenerator keyGenerator = KeyGenerator
                 .getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEY_STORE);
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            keyGenerator.init(new KeyGenParameterSpec.Builder(alias,
-                    KeyProperties.PURPOSE_ENCRYPT | KeyProperties.PURPOSE_DECRYPT)
-                    .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
-                    .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
-                    .build());
-        }
+        keyGenerator.init(new KeyGenParameterSpec.Builder(alias,
+                KeyProperties.PURPOSE_ENCRYPT | KeyProperties.PURPOSE_DECRYPT)
+                .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                .build());
+
         return keyGenerator.generateKey();
     }
 
