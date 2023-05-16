@@ -38,6 +38,7 @@ public class FirstFragment extends Fragment {
     private FragmentFirstBinding binding;
 //    TODO: set up unique alias for each tkey
     private final String ALIAS = "ALIAS";
+    private final String POSTBOX_KEY_ALIAS = "POSTBOX_KEY_ALIAS";
 
     @Override
     public View onCreateView(
@@ -84,8 +85,26 @@ public class FirstFragment extends Fragment {
         MainActivity activity = ((MainActivity) requireActivity());
 
         try {
-            PrivateKey postBoxKey = PrivateKey.generate();
-            activity.postboxKey = postBoxKey.hex;
+            String savedPostBoxKey = null;
+            try {
+                savedPostBoxKey = activity.keyChainInterface.fetch(POSTBOX_KEY_ALIAS);
+            } catch (RuntimeException e) {
+                e.printStackTrace();
+            }
+
+
+            if(savedPostBoxKey == null) {
+                PrivateKey postBoxKey =  PrivateKey.generate();
+                activity.postboxKey =  postBoxKey.hex;
+                try {
+                    activity.keyChainInterface.save(POSTBOX_KEY_ALIAS, activity.postboxKey);
+                } catch (RuntimeException e) {
+                    Log.e("MainActivity", "failed to save postbox key");
+                }
+            } else {
+                activity.postboxKey = savedPostBoxKey;
+            }
+
         } catch (RuntimeError e) {
             // Exit the app
             throw new RuntimeException(e);
