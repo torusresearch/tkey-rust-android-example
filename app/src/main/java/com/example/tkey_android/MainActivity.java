@@ -1,5 +1,7 @@
 package com.example.tkey_android;
 
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 
 import com.google.android.material.snackbar.Snackbar;
@@ -39,6 +41,10 @@ public class MainActivity extends AppCompatActivity {
 
     public KeyChainInterface keyChainInterface;
 
+    public SharedPreferences sharedpreferences;
+
+    private static final String PREF_FILE_NAME = "app_shared_preferences";
+
     public void resetState() {
         this.appKey = null;
         this.tkeyProvider = null;
@@ -57,6 +63,9 @@ public class MainActivity extends AppCompatActivity {
         }
 
         keyChainInterface = new KeyChainInterface();
+
+        sharedpreferences = getSharedPreferences(PREF_FILE_NAME,
+                Context.MODE_PRIVATE);
 
         new AlertDialog.Builder(MainActivity.this)
                 .setTitle("Native library version")

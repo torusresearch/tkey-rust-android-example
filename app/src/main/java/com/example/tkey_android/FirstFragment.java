@@ -1,4 +1,5 @@
 package com.example.tkey_android;
+import android.content.SharedPreferences;
 import android.util.Log;
 
 import android.os.Build;
@@ -87,7 +88,7 @@ public class FirstFragment extends Fragment {
         try {
             String savedPostBoxKey = null;
             try {
-                savedPostBoxKey = activity.keyChainInterface.fetch(POSTBOX_KEY_ALIAS);
+                savedPostBoxKey = activity.sharedpreferences.getString(POSTBOX_KEY_ALIAS, null);
             } catch (RuntimeException e) {
                 e.printStackTrace();
             }
@@ -97,7 +98,9 @@ public class FirstFragment extends Fragment {
                 PrivateKey postBoxKey =  PrivateKey.generate();
                 activity.postboxKey =  postBoxKey.hex;
                 try {
-                    activity.keyChainInterface.save(POSTBOX_KEY_ALIAS, activity.postboxKey);
+                    SharedPreferences.Editor editor = activity.sharedpreferences.edit();
+                    editor.putString(POSTBOX_KEY_ALIAS, activity.postboxKey);
+                    editor.commit();
                 } catch (RuntimeException e) {
                     Log.e("MainActivity", "failed to save postbox key");
                 }
