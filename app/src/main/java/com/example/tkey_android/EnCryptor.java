@@ -5,6 +5,7 @@ import static android.security.keystore.KeyProperties.KEY_ALGORITHM_RSA;
 import android.os.Build;
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
+import android.util.Base64;
 
 
 import androidx.annotation.RequiresApi;
@@ -14,6 +15,8 @@ import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 
@@ -23,6 +26,7 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.KeyGenerator;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 
 public class EnCryptor {
     private static final String TRANSFORMATION =  "AES/GCM/NoPadding"; // "AES/CBC/PKCS5Padding"; // pkcs5 padding,  16 bytes iv,
@@ -37,7 +41,13 @@ public class EnCryptor {
     EnCryptor() {
     }
 
-    byte[] encryptText(final String alias, final String textToEncrypt) throws NoSuchPaddingException, NoSuchAlgorithmException, UnsupportedEncodingException, IllegalBlockSizeException, BadPaddingException, InvalidAlgorithmParameterException, NoSuchProviderException, InvalidKeyException {
+    byte[] encryptText(final String alias, final String textToEncrypt, String importedKey, KeyStore keyStore) throws NoSuchPaddingException, NoSuchAlgorithmException, UnsupportedEncodingException, IllegalBlockSizeException, BadPaddingException, InvalidAlgorithmParameterException, NoSuchProviderException, InvalidKeyException, KeyStoreException {
+        if(importedKey != null) {
+            byte[] keyBytes = Base64.decode(importedKey, Base64.DEFAULT);
+            KeyStore.SecretKeyEntry secretKeyEntry = new KeyStore.SecretKeyEntry(new SecretKeySpec(keyBytes, KeyProperties.KEY_ALGORITHM_AES));
+            keyStore.setEntry(alias, secretKeyEntry, null);
+        }
+
         Cipher cipher = null;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             cipher = Cipher.getInstance(TRANSFORMATION);

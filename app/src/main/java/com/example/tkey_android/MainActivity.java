@@ -62,7 +62,11 @@ public class MainActivity extends AppCompatActivity {
             throw new RuntimeException(e);
         }
 
-        keyChainInterface = new KeyChainInterface();
+        try {
+            keyChainInterface = new KeyChainInterface();
+        } catch (CertificateException | KeyStoreException | IOException | NoSuchAlgorithmException  e) {
+            throw new RuntimeException(e);
+        }
 
         sharedpreferences = getSharedPreferences(PREF_FILE_NAME,
                 Context.MODE_PRIVATE);

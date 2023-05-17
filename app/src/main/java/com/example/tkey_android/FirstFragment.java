@@ -41,6 +41,8 @@ public class FirstFragment extends Fragment {
     private final String ALIAS = "ALIAS";
     private final String POSTBOX_KEY_ALIAS = "POSTBOX_KEY_ALIAS";
 
+    private String importedEncryptionKey = null;
+
     @Override
     public View onCreateView(
             @NonNull LayoutInflater inflater, ViewGroup container,
@@ -71,7 +73,7 @@ public class FirstFragment extends Fragment {
             Log.d("MainActivity", "index: " +  index);
             Log.d("MainActivity", "share: " + share);
             Log.d("MainActivity", "alias: " + ALIAS);
-            activity.keyChainInterface.save(ALIAS, share);
+            activity.keyChainInterface.save(ALIAS, share, importedEncryptionKey);
 
             String text = activity.keyChainInterface.fetch(ALIAS);
             Log.d("MainActivity", "retrieved: " + text);
@@ -85,6 +87,10 @@ public class FirstFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
         MainActivity activity = ((MainActivity) requireActivity());
 
+        SharedPreferences.Editor clear_editor = activity.sharedpreferences.edit();
+        clear_editor.clear();
+        clear_editor.commit();
+
         try {
             String savedPostBoxKey = null;
             try {
@@ -92,7 +98,6 @@ public class FirstFragment extends Fragment {
             } catch (RuntimeException e) {
                 e.printStackTrace();
             }
-
 
             if(savedPostBoxKey == null) {
                 PrivateKey postBoxKey =  PrivateKey.generate();
@@ -162,9 +167,6 @@ public class FirstFragment extends Fragment {
                                             binding.resultView.append("Required Shares" + details.getThreshold() + "\n");
                                             binding.createThresholdKey.setEnabled(true);
                                             binding.reconstructThresholdKey.setEnabled(true);
-
-
-
                                         } catch (RuntimeError e) {
                                             Snackbar snackbar = Snackbar.make(view1, "Please reset account, a problem occurred: " + e, Snackbar.LENGTH_LONG);
                                             snackbar.show();

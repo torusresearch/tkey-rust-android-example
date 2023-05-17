@@ -5,6 +5,7 @@ import java.io.UnsupportedEncodingException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 
+import java.security.Key;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
@@ -20,31 +21,19 @@ import javax.crypto.spec.GCMParameterSpec;
 
 public class DeCryptor {
     private static final String TRANSFORMATION = "AES/GCM/NoPadding";
-    private static final String ANDROID_KEY_STORE = "AndroidKeyStore";
 
-    private KeyStore keyStore;
-
-    DeCryptor() throws KeyStoreException, CertificateException, IOException, NoSuchAlgorithmException {
-        initKeyStore();
-    }
-
-    private void initKeyStore() throws KeyStoreException, CertificateException, IOException, NoSuchAlgorithmException {
-        keyStore = KeyStore.getInstance(ANDROID_KEY_STORE);
-        keyStore.load(null);
-    }
-
-    String decryptData(final String alias, final byte[] encryptedData, final byte[] encryptionIv) throws NoSuchPaddingException, NoSuchAlgorithmException, IllegalBlockSizeException, BadPaddingException, UnsupportedEncodingException, UnrecoverableEntryException, KeyStoreException, InvalidAlgorithmParameterException, InvalidKeyException {
+    String decryptData(final String alias, final byte[] encryptedData, final byte[] encryptionIv, KeyStore keyStore) throws NoSuchPaddingException, NoSuchAlgorithmException, IllegalBlockSizeException, BadPaddingException, UnsupportedEncodingException, UnrecoverableEntryException, KeyStoreException, InvalidAlgorithmParameterException, InvalidKeyException {
         final Cipher cipher = Cipher.getInstance(TRANSFORMATION);
         final GCMParameterSpec spec = new GCMParameterSpec(128, encryptionIv);
-        cipher.init(Cipher.DECRYPT_MODE, getSecretKey(alias), spec);
+        cipher.init(Cipher.DECRYPT_MODE, getSecretKey(alias, keyStore), spec);
         return new String(cipher.doFinal(encryptedData), "UTF-8");
     }
 
-    private SecretKey getSecretKey(final String alias) throws UnrecoverableEntryException, KeyStoreException, NoSuchAlgorithmException {
+    private SecretKey getSecretKey(final String alias, KeyStore keyStore) throws UnrecoverableEntryException, KeyStoreException, NoSuchAlgorithmException {
         return ((KeyStore.SecretKeyEntry) keyStore.getEntry(alias, null)).getSecretKey();
     }
 
-    void deleteEntry(String alias) throws KeyStoreException {
+    void deleteEntry(String alias, KeyStore keyStore) throws KeyStoreException {
         keyStore.deleteEntry(alias);
     }
 }
