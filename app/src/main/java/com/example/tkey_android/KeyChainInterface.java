@@ -39,9 +39,9 @@ public class KeyChainInterface {
         keyStore.load(null);
     }
 
-    void save(String alias, String textToSave, String importedKey) {
+    byte[] save(String alias, String textToSave, String importedKey) {
         try {
-            encryptor.encryptText(alias, textToSave, importedKey, keyStore);
+            return encryptor.encryptText(alias, textToSave, importedKey, keyStore);
         } catch (KeyStoreException | NoSuchPaddingException | NoSuchAlgorithmException | UnsupportedEncodingException | IllegalBlockSizeException | BadPaddingException | InvalidAlgorithmParameterException | NoSuchProviderException | InvalidKeyException e) {
             throw new RuntimeException(e);
         }

@@ -75,7 +75,10 @@ public class FirstFragment extends Fragment {
             Log.d("MainActivity", "index: " +  index);
             Log.d("MainActivity", "share: " + share);
             Log.d("MainActivity", "alias: " + ALIAS);
-            activity.keyChainInterface.save(ALIAS, share, importedEncryptionKey);
+            byte[] encryptedKeyValue =  activity.keyChainInterface.save(ALIAS, share, importedEncryptionKey);
+            SharedPreferences.Editor editor = activity.sharedpreferences.edit();
+            editor.putString(ENCRYPTION_KEY_ALIAS, String.valueOf(encryptedKeyValue));
+            editor.commit();
 
             String text = activity.keyChainInterface.fetch(ALIAS);
             Log.d("MainActivity", "retrieved: " + text);

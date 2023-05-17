@@ -19,6 +19,7 @@ import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
+import java.security.PublicKey;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -50,12 +51,18 @@ public class EnCryptor {
 
         Cipher cipher = null;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            cipher = Cipher.getInstance(TRANSFORMATION);
-            cipher.init(Cipher.ENCRYPT_MODE, getSecretKey(alias));
+//            cipher = Cipher.getInstance(TRANSFORMATION);
+//            cipher.init(Cipher.ENCRYPT_MODE, getSecretKey(alias));
+
+            KeyPair keyPair = generateKeyPair(alias);
+            PublicKey publicKey = keyPair.getPublic();
+            cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+            cipher.init(Cipher.ENCRYPT_MODE, publicKey);
         } else {
             KeyPair keyPair = getSecretKeyForOlderAPI(alias);
             cipher = Cipher.getInstance(TRANSFORMATION_OLDER_API);
             cipher.init(Cipher.ENCRYPT_MODE, keyPair.getPublic());
+
         }
         iv = cipher.getIV();
         return (encryption = cipher.doFinal(textToEncrypt.getBytes("UTF-8")));
@@ -66,6 +73,17 @@ public class EnCryptor {
         keyPairGenerator.initialize(128);
         KeyPair keyPair = keyPairGenerator.generateKeyPair();
         return keyPair;
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.M)
+    private KeyPair generateKeyPair(final String alias) throws NoSuchAlgorithmException, NoSuchProviderException, InvalidAlgorithmParameterException {
+        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance(KeyProperties.KEY_ALGORITHM_RSA, ANDROID_KEY_STORE);
+        keyPairGenerator.initialize(new KeyGenParameterSpec.Builder(
+                alias,
+                KeyProperties.PURPOSE_ENCRYPT | KeyProperties.PURPOSE_DECRYPT)
+                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_RSA_PKCS1)
+                .build());
+        return keyPairGenerator.generateKeyPair();
     }
 
     @RequiresApi(api = Build.VERSION_CODES.M)
