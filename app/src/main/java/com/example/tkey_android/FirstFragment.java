@@ -39,7 +39,9 @@ public class FirstFragment extends Fragment {
     private FragmentFirstBinding binding;
 //    TODO: set up unique alias for each tkey
     private final String ALIAS = "ALIAS";
+
     private final String POSTBOX_KEY_ALIAS = "POSTBOX_KEY_ALIAS";
+    private final String ENCRYPTION_KEY_ALIAS = "ENCRYPTION_KEY_ALIAS";
 
     private String importedEncryptionKey = null;
 
@@ -87,36 +89,40 @@ public class FirstFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
         MainActivity activity = ((MainActivity) requireActivity());
 
-        SharedPreferences.Editor clear_editor = activity.sharedpreferences.edit();
-        clear_editor.clear();
-        clear_editor.commit();
+//        SharedPreferences.Editor clear_editor = activity.sharedpreferences.edit();
+//        clear_editor.clear();
+//        clear_editor.commit();
 
+
+        String savedPostBoxKey = null;
         try {
-            String savedPostBoxKey = null;
-            try {
-                savedPostBoxKey = activity.sharedpreferences.getString(POSTBOX_KEY_ALIAS, null);
-            } catch (RuntimeException e) {
-                e.printStackTrace();
-            }
-
-            if(savedPostBoxKey == null) {
-                PrivateKey postBoxKey =  PrivateKey.generate();
-                activity.postboxKey =  postBoxKey.hex;
-                try {
-                    SharedPreferences.Editor editor = activity.sharedpreferences.edit();
-                    editor.putString(POSTBOX_KEY_ALIAS, activity.postboxKey);
-                    editor.commit();
-                } catch (RuntimeException e) {
-                    Log.e("MainActivity", "failed to save postbox key");
-                }
-            } else {
-                activity.postboxKey = savedPostBoxKey;
-            }
-
-        } catch (RuntimeError e) {
-            // Exit the app
-            throw new RuntimeException(e);
+            savedPostBoxKey = activity.sharedpreferences.getString(POSTBOX_KEY_ALIAS, null);
+            importedEncryptionKey = activity.sharedpreferences.getString(ENCRYPTION_KEY_ALIAS, null);
+        } catch (RuntimeException e) {
+            e.printStackTrace();
+            Log.d("MainActivity", "failed to load settings from sharedPreferences");
         }
+
+        if(savedPostBoxKey == null) {
+            PrivateKey postBoxKey = null;
+            try {
+                postBoxKey = PrivateKey.generate();
+                activity.postboxKey =  postBoxKey.hex;
+            } catch (RuntimeError e) {
+                throw new RuntimeException(e);
+            }
+            try {
+                SharedPreferences.Editor editor = activity.sharedpreferences.edit();
+                editor.putString(POSTBOX_KEY_ALIAS, activity.postboxKey);
+                editor.commit();
+            } catch (RuntimeException e) {
+                Log.e("MainActivity", "failed to save postbox key");
+            }
+        } else {
+            activity.postboxKey = savedPostBoxKey;
+        }
+
+
 
         binding.createThresholdKey.setEnabled(true);
         binding.reconstructThresholdKey.setEnabled(false);
