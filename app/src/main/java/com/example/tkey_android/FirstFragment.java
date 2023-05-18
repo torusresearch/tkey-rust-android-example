@@ -147,6 +147,10 @@ public class FirstFragment extends Fragment {
 //            3. If shares are found, insert them into tkey and then try reconstruct. If success, all good, if fail then share is incorrect, go to prompt to reset account
 
             try {
+                activity.tkeyStorage = new StorageLayer(false, "https://metadata.tor.us", 2);
+                activity.tkeyProvider = new ServiceProvider(false, activity.postboxKey);
+                activity.appKey = new ThresholdKey(null, null, activity.tkeyStorage, activity.tkeyProvider, null, null, false, false);
+
 
 //            1. Fetch locally available shares
                 String share = null;
@@ -155,9 +159,6 @@ public class FirstFragment extends Fragment {
                 } catch (RuntimeException e) {}
                 if(share == null) {
 //            2. If no shares, then assume new user and try initialize and reconstruct. If success, save share, if fail prompt to reset account.
-                    activity.tkeyStorage = new StorageLayer(false, "https://metadata.tor.us", 2);
-                    activity.tkeyProvider = new ServiceProvider(false, activity.postboxKey);
-                    activity.appKey = new ThresholdKey(null, null, activity.tkeyStorage, activity.tkeyProvider, null, null, false, false);
                     activity.appKey.initialize(activity.postboxKey, null, false, false, result -> {
 
                         if (result instanceof Result.Error) {
