@@ -23,6 +23,8 @@ import javax.crypto.spec.GCMParameterSpec;
 public class DeCryptor {
     private static final String TRANSFORMATION = "AES/GCM/NoPadding";
 
+
+//    init with key pair
     String decryptData(final String alias, final byte[] encryptedData, KeyStore keyStore) throws UnrecoverableEntryException, KeyStoreException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, UnsupportedEncodingException {
         KeyStore.Entry entry = keyStore.getEntry(alias, null);
         if(entry instanceof KeyStore.PrivateKeyEntry) {

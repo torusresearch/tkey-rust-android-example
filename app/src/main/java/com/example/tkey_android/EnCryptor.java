@@ -39,6 +39,7 @@ public class EnCryptor {
     private byte[] encryption;
     private byte[] iv;
 
+//    init with key pair
     EnCryptor(byte[] encryption) {
         this.encryption = encryption;
     }
