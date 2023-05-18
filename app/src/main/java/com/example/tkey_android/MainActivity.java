@@ -21,6 +21,7 @@ import com.web3auth.tkey.ThresholdKey.ThresholdKey;
 import com.web3auth.tkey.Version;
 import com.web3auth.tkey.RuntimeError;
 
+import android.util.Base64;
 import android.view.Menu;
 import android.view.MenuItem;
 
@@ -30,6 +31,9 @@ import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 
 public class MainActivity extends AppCompatActivity {
+
+    //    To be used for saving/reading data from shared prefs
+    public final String ENCRYPTION_KEY_ALIAS = "ENCRYPTION_KEY_ALIAS";
 
     private AppBarConfiguration appBarConfiguration;
 
@@ -62,14 +66,21 @@ public class MainActivity extends AppCompatActivity {
             throw new RuntimeException(e);
         }
 
+        sharedpreferences = getSharedPreferences(PREF_FILE_NAME,
+                Context.MODE_PRIVATE);
+
         try {
-            keyChainInterface = new KeyChainInterface();
+            String encryptionBase64String = sharedpreferences.getString(ENCRYPTION_KEY_ALIAS, null);
+            byte[] encryption = null;
+            if(encryptionBase64String != null) {
+                encryption = Base64.decode(encryptionBase64String, Base64.DEFAULT);
+            }
+            keyChainInterface = new KeyChainInterface(encryption);
         } catch (CertificateException | KeyStoreException | IOException | NoSuchAlgorithmException  e) {
             throw new RuntimeException(e);
         }
 
-        sharedpreferences = getSharedPreferences(PREF_FILE_NAME,
-                Context.MODE_PRIVATE);
+
 
         new AlertDialog.Builder(MainActivity.this)
                 .setTitle("Native library version")

@@ -39,15 +39,16 @@ public class EnCryptor {
     private byte[] encryption;
     private byte[] iv;
 
-    EnCryptor() {
+    EnCryptor(byte[] encryption) {
+        this.encryption = encryption;
     }
 
-    byte[] encryptText(final String alias, final String textToEncrypt, String importedKey, KeyStore keyStore) throws NoSuchPaddingException, NoSuchAlgorithmException, UnsupportedEncodingException, IllegalBlockSizeException, BadPaddingException, InvalidAlgorithmParameterException, NoSuchProviderException, InvalidKeyException, KeyStoreException {
-        if(importedKey != null) {
-            byte[] keyBytes = Base64.decode(importedKey, Base64.DEFAULT);
-            KeyStore.SecretKeyEntry secretKeyEntry = new KeyStore.SecretKeyEntry(new SecretKeySpec(keyBytes, KeyProperties.KEY_ALGORITHM_AES));
-            keyStore.setEntry(alias, secretKeyEntry, null);
-        }
+    byte[] encryptText(final String alias, final String textToEncrypt, KeyStore keyStore) throws NoSuchPaddingException, NoSuchAlgorithmException, UnsupportedEncodingException, IllegalBlockSizeException, BadPaddingException, InvalidAlgorithmParameterException, NoSuchProviderException, InvalidKeyException, KeyStoreException {
+//        if(importedKey != null) {
+//            byte[] keyBytes = Base64.decode(importedKey, Base64.DEFAULT);
+//            KeyStore.SecretKeyEntry secretKeyEntry = new KeyStore.SecretKeyEntry(new SecretKeySpec(keyBytes, KeyProperties.KEY_ALGORITHM_AES));
+//            keyStore.setEntry(alias, secretKeyEntry, null);
+//        }
 
         Cipher cipher = null;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {

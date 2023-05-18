@@ -28,8 +28,8 @@ public class KeyChainInterface {
     private static final String ANDROID_KEY_STORE = "AndroidKeyStore";
 
 
-    KeyChainInterface() throws CertificateException, KeyStoreException, IOException, NoSuchAlgorithmException {
-        encryptor = new EnCryptor();
+    KeyChainInterface(byte[] encryption) throws CertificateException, KeyStoreException, IOException, NoSuchAlgorithmException {
+        encryptor = new EnCryptor(encryption);
         decryptor = new DeCryptor();
         initKeyStore();
     }
@@ -39,9 +39,9 @@ public class KeyChainInterface {
         keyStore.load(null);
     }
 
-    byte[] save(String alias, String textToSave, String importedKey) {
+    byte[] save(String alias, String textToSave) {
         try {
-            return encryptor.encryptText(alias, textToSave, importedKey, keyStore);
+            return encryptor.encryptText(alias, textToSave, keyStore);
         } catch (KeyStoreException | NoSuchPaddingException | NoSuchAlgorithmException | UnsupportedEncodingException | IllegalBlockSizeException | BadPaddingException | InvalidAlgorithmParameterException | NoSuchProviderException | InvalidKeyException e) {
             throw new RuntimeException(e);
         }
@@ -49,8 +49,8 @@ public class KeyChainInterface {
 
     String fetch(String alias) {
         try {
-            return decryptor.decryptData(alias, encryptor.getEncryption(), encryptor.getIv(), keyStore);
-        } catch ( UnrecoverableEntryException | KeyStoreException | NoSuchPaddingException | NoSuchAlgorithmException | UnsupportedEncodingException | IllegalBlockSizeException | BadPaddingException | InvalidAlgorithmParameterException | InvalidKeyException e) {
+            return decryptor.decryptData(alias, encryptor.getEncryption(), keyStore);
+        } catch ( UnrecoverableEntryException | KeyStoreException | NoSuchPaddingException | NoSuchAlgorithmException | UnsupportedEncodingException | IllegalBlockSizeException | BadPaddingException  | InvalidKeyException e) {
 //            throw new RuntimeException(e);
             return null;
         }

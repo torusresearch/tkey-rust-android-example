@@ -1,5 +1,6 @@
 package com.example.tkey_android;
 import android.content.SharedPreferences;
+import android.util.Base64;
 import android.util.Log;
 
 import android.os.Build;
@@ -40,8 +41,9 @@ public class FirstFragment extends Fragment {
 //    TODO: set up unique alias for each tkey
     private final String ALIAS = "ALIAS";
 
+//    To be used for saving/reading data from shared prefs
     private final String POSTBOX_KEY_ALIAS = "POSTBOX_KEY_ALIAS";
-    private final String ENCRYPTION_KEY_ALIAS = "ENCRYPTION_KEY_ALIAS";
+
 
     private String importedEncryptionKey = null;
 
@@ -75,14 +77,17 @@ public class FirstFragment extends Fragment {
             Log.d("MainActivity", "index: " +  index);
             Log.d("MainActivity", "share: " + share);
             Log.d("MainActivity", "alias: " + ALIAS);
-            byte[] encryptedKeyValue =  activity.keyChainInterface.save(ALIAS, share, importedEncryptionKey);
+            byte[] encryptedKeyValue =  activity.keyChainInterface.save(ALIAS, share);
+
+//            Save the encryption in shared prefs as base64String
             SharedPreferences.Editor editor = activity.sharedpreferences.edit();
-            editor.putString(ENCRYPTION_KEY_ALIAS, String.valueOf(encryptedKeyValue));
+            String base64String = Base64.encodeToString(encryptedKeyValue, Base64.DEFAULT);
+            editor.putString(activity.ENCRYPTION_KEY_ALIAS, base64String);
             editor.commit();
 
             String text = activity.keyChainInterface.fetch(ALIAS);
             Log.d("MainActivity", "retrieved: " + text);
-        } catch (JSONException | RuntimeError e) {
+        } catch (JSONException | RuntimeError | RuntimeException e) {
             Log.e("MainActivity", "saveShareLocally: ", e);
             displayError((Exception) e, "save share locally", view);
         }
@@ -100,7 +105,6 @@ public class FirstFragment extends Fragment {
         String savedPostBoxKey = null;
         try {
             savedPostBoxKey = activity.sharedpreferences.getString(POSTBOX_KEY_ALIAS, null);
-            importedEncryptionKey = activity.sharedpreferences.getString(ENCRYPTION_KEY_ALIAS, null);
         } catch (RuntimeException e) {
             e.printStackTrace();
             Log.d("MainActivity", "failed to load settings from sharedPreferences");
