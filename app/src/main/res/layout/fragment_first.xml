@@ -62,7 +62,19 @@
                 android:id="@+id/createThresholdKey"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Create tKey" />
+                android:text="Init and Reconstruct tKey" />
+
+            <Button
+                android:id="@+id/resetAccount"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Reset Account" />
+
+            <ProgressBar
+                android:id="@+id/resetAccountProgress"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:visibility="gone" />
 
             <Button
                 android:id="@+id/reconstructThresholdKey"

@@ -1,5 +1,7 @@
 package com.example.tkey_android;
 
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 
 import com.google.android.material.snackbar.Snackbar;
@@ -19,16 +21,33 @@ import com.web3auth.tkey.ThresholdKey.ThresholdKey;
 import com.web3auth.tkey.Version;
 import com.web3auth.tkey.RuntimeError;
 
+import android.util.Base64;
 import android.view.Menu;
 import android.view.MenuItem;
 
-public class MainActivity extends AppCompatActivity {
+import java.io.IOException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
 
+public class MainActivity extends AppCompatActivity {
     private AppBarConfiguration appBarConfiguration;
 
     public ThresholdKey appKey;
     public StorageLayer tkeyStorage;
     public ServiceProvider tkeyProvider;
+
+    public String postboxKey;
+
+    public SharedPreferences sharedpreferences;
+
+    private static final String PREF_FILE_NAME = "app_shared_preferences";
+
+    public void resetState() {
+        this.appKey = null;
+        this.tkeyProvider = null;
+        this.tkeyStorage = null;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,6 +59,10 @@ public class MainActivity extends AppCompatActivity {
         } catch (RuntimeError e) {
             throw new RuntimeException(e);
         }
+
+        sharedpreferences = getSharedPreferences(PREF_FILE_NAME,
+                Context.MODE_PRIVATE);
+
         new AlertDialog.Builder(MainActivity.this)
                 .setTitle("Native library version")
                 .setMessage(libversion)
