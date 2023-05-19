@@ -61,7 +61,6 @@ public class FirstFragment extends Fragment {
     };
 
 //    To be used for saving/reading data from shared prefs
-    private final String POSTBOX_KEY_ALIAS = "POSTBOX_KEY";
     private final String SHARE_ALIAS = "SHARE";
 
     @Override
@@ -153,28 +152,6 @@ public class FirstFragment extends Fragment {
 //            1. Fetch locally available shares and postbox key. Generate a new postboxkey if not available.
 //            2. If no shares, then assume new user and try initialize and reconstruct. If success, save share, if fail prompt to reset account.
 //            3. If shares are found, insert them into tkey and then try reconstruct. If success, all good, if fail then share is incorrect, go to prompt to reset account
-
-            if(activity.postboxKey == null){
-                String savedPostBoxKey = activity.sharedpreferences.getString(POSTBOX_KEY_ALIAS, null);
-                if (savedPostBoxKey == null) {
-                    try {
-                        activity.postboxKey = PrivateKey.generate().hex;
-                    } catch (RuntimeError e) {
-                        throw new RuntimeException(e);
-                    }
-                    try {
-                        SharedPreferences.Editor editor = activity.sharedpreferences.edit();
-                        editor.putString(POSTBOX_KEY_ALIAS, activity.postboxKey);
-                        editor.commit();
-                    } catch (RuntimeException e) {
-                        Log.e("MainActivity", "failed to save postbox key");
-                    }
-                } else {
-                    activity.postboxKey = savedPostBoxKey;
-                }
-            }
-
-
 
             try {
                 activity.tkeyStorage = new StorageLayer(false, "https://metadata.tor.us", 2);
