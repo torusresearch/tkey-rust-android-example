@@ -31,10 +31,6 @@ import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 
 public class MainActivity extends AppCompatActivity {
-
-    //    To be used for saving/reading data from shared prefs
-    public final String ENCRYPTION_KEY_ALIAS = "ENCRYPTION_KEY_ALIAS";
-
     private AppBarConfiguration appBarConfiguration;
 
     public ThresholdKey appKey;
