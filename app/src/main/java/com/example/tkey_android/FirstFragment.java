@@ -42,7 +42,6 @@ import org.torusresearch.customauth.types.UserCancelledException;
 import org.torusresearch.customauth.utils.Helpers;
 import org.torusresearch.fetchnodedetails.types.TorusNetwork;
 
-import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -139,7 +138,8 @@ public class FirstFragment extends Fragment {
                     } else {
                         String publicAddress = torusLoginResponse.getPublicAddress();
                         activity.postboxKey = torusLoginResponse.getPrivateKey().toString(16);
-                        binding.resultView.setText("publicAddress: " + publicAddress);
+                        binding.resultView.setText("publicAddress: ");
+                        binding.resultView.setText(publicAddress);
                         binding.createThresholdKey.setEnabled(true);
                         binding.googleLogin.setEnabled(false);
                     }
