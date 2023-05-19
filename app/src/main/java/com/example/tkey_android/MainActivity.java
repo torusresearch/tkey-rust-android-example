@@ -43,8 +43,6 @@ public class MainActivity extends AppCompatActivity {
 
     public String postboxKey;
 
-    public KeyChainInterface keyChainInterface;
-
     public SharedPreferences sharedpreferences;
 
     private static final String PREF_FILE_NAME = "app_shared_preferences";
@@ -68,19 +66,6 @@ public class MainActivity extends AppCompatActivity {
 
         sharedpreferences = getSharedPreferences(PREF_FILE_NAME,
                 Context.MODE_PRIVATE);
-
-        try {
-            String encryptionBase64String = sharedpreferences.getString(ENCRYPTION_KEY_ALIAS, null);
-            byte[] encryption = null;
-            if(encryptionBase64String != null) {
-                encryption = Base64.decode(encryptionBase64String, Base64.DEFAULT);
-            }
-            keyChainInterface = new KeyChainInterface(encryption);
-        } catch (CertificateException | KeyStoreException | IOException | NoSuchAlgorithmException  e) {
-            throw new RuntimeException(e);
-        }
-
-
 
         new AlertDialog.Builder(MainActivity.this)
                 .setTitle("Native library version")

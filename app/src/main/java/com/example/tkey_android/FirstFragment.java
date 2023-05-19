@@ -40,22 +40,16 @@ import java.util.List;
 public class FirstFragment extends Fragment {
 
     private FragmentFirstBinding binding;
-//    TODO: set up unique alias for each tkey
-    private final String ALIAS = "ALIAS";
 
 //    To be used for saving/reading data from shared prefs
     private final String POSTBOX_KEY_ALIAS = "POSTBOX_KEY";
     private final String SHARE_ALIAS = "SHARE";
-
-
-    private String importedEncryptionKey = null;
 
     @Override
     public View onCreateView(
             @NonNull LayoutInflater inflater, ViewGroup container,
             Bundle savedInstanceState
     ) {
-
         binding = FragmentFirstBinding.inflate(inflater, container, false);
         return binding.getRoot();
     }
@@ -83,7 +77,7 @@ public class FirstFragment extends Fragment {
 
         binding.createThresholdKey.setOnClickListener(view1 -> {
 //            Logic:
-//            1. Fetch locally available shares
+//            1. Fetch locally available shares and postbox key. Generate a new postboxkey if not available.
 //            2. If no shares, then assume new user and try initialize and reconstruct. If success, save share, if fail prompt to reset account.
 //            3. If shares are found, insert them into tkey and then try reconstruct. If success, all good, if fail then share is incorrect, go to prompt to reset account
 
@@ -114,7 +108,7 @@ public class FirstFragment extends Fragment {
 
 //            1. Fetch locally available share
                 String share = activity.sharedpreferences.getString(SHARE_ALIAS, null);
-                    activity.appKey.initialize(activity.postboxKey, null, false, false, result -> {
+                activity.appKey.initialize(activity.postboxKey, null, false, false, result -> {
                         if (result instanceof Result.Error) {
                             Exception ee = ((Result.Error<KeyDetails>) result).exception;
                             ee.printStackTrace();
@@ -408,10 +402,6 @@ public class FirstFragment extends Fragment {
         binding.resetAccount.setOnClickListener(view1 -> {
             try {
 //                delete locally stored share
-
-                Log.d("MainActivity", "Deleting locally stored share " + ALIAS );
-                //activity.keyChainInterface.deleteEntry(ALIAS);
-
                 StorageLayer temp_sl = new StorageLayer(false, "https://metadata.tor.us", 2);
                 ServiceProvider temp_sp = new ServiceProvider(false, activity.postboxKey);
                 ThresholdKey temp_key = new ThresholdKey(null, null, temp_sl, temp_sp, null, null, false, false);
