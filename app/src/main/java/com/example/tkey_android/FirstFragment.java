@@ -1,9 +1,7 @@
 package com.example.tkey_android;
 import android.content.SharedPreferences;
-import android.util.Base64;
 import android.util.Log;
 
-import android.os.Build;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -13,7 +11,6 @@ import android.widget.TextView;
 import android.widget.ProgressBar;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.RequiresApi;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.fragment.NavHostFragment;
 
@@ -137,20 +134,17 @@ public class FirstFragment extends Fragment {
                             .setAllowedBrowsers(allowedBrowsers));
                 }
 
-                torusLoginResponseCf.whenComplete((torusLoginResponse, error) -> {
-                    activity.runOnUiThread(() -> {
-                        if (error != null) {
-                            renderError(error);
-                        } else {
-                            String publicAddress = torusLoginResponse.getPublicAddress();
-                            this.postBoxKey = torusLoginResponse.getPrivateKey();
-                            binding.resultView.setText("publicAddress: " + publicAddress);
-                            binding.createThresholdKey.setEnabled(true);
-                            binding.googleLogin.setEnabled(false);
-                        }
-                    });
-
-                });
+                torusLoginResponseCf.whenComplete((torusLoginResponse, error) -> activity.runOnUiThread(() -> {
+                    if (error != null) {
+                        renderError(error);
+                    } else {
+                        String publicAddress = torusLoginResponse.getPublicAddress();
+                        postBoxKey = torusLoginResponse.getPrivateKey();
+                        binding.resultView.setText("publicAddress: " + publicAddress);
+                        binding.createThresholdKey.setEnabled(true);
+                        binding.googleLogin.setEnabled(false);
+                    }
+                }));
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -269,25 +263,23 @@ public class FirstFragment extends Fragment {
             }
         });
 
-        binding.reconstructThresholdKey.setOnClickListener(view1 -> {
-            activity.appKey.reconstruct(result -> {
-                if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
-                    displayError(((Result.Error<KeyReconstructionDetails>) result).exception, "reconstruct key", view1);
-                } else if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
-                    requireActivity().runOnUiThread(() -> {
-                        try {
-                            KeyReconstructionDetails details = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<KeyReconstructionDetails>) result).data;
-                            binding.generateNewShare.setEnabled(true);
-                            Snackbar snackbar = Snackbar.make(view1, details.getKey(), Snackbar.LENGTH_LONG);
-                            snackbar.show();
-                        } catch (RuntimeError e) {
-                            Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
-                            snackbar.show();
-                        }
-                    });
-                }
-            });
-        });
+        binding.reconstructThresholdKey.setOnClickListener(view1 -> activity.appKey.reconstruct(result -> {
+            if (result instanceof Result.Error) {
+                displayError(((Result.Error<KeyReconstructionDetails>) result).exception, "reconstruct key", view1);
+            } else if (result instanceof Result.Success) {
+                requireActivity().runOnUiThread(() -> {
+                    try {
+                        KeyReconstructionDetails details = ((Result.Success<KeyReconstructionDetails>) result).data;
+                        binding.generateNewShare.setEnabled(true);
+                        Snackbar snackbar = Snackbar.make(view1, details.getKey(), Snackbar.LENGTH_LONG);
+                        snackbar.show();
+                    } catch (RuntimeError e) {
+                        Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
+                        snackbar.show();
+                    }
+                });
+            }
+        }));
 
         binding.generateNewShare.setOnClickListener(view1 -> {
             try {
