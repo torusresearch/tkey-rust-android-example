@@ -35,7 +35,7 @@ import com.web3auth.tkey.ThresholdKey.ThresholdKey;
 
 import org.json.JSONException;
 import org.torusresearch.customauth.CustomAuth;
-import org.torusresearch.customauth.types.Auth0ClientOptions;
+import org.torusresearch.customauth.types.Auth0ClientOptions.Auth0ClientOptionsBuilder;
 import org.torusresearch.customauth.types.CustomAuthArgs;
 import org.torusresearch.customauth.types.LoginType;
 import org.torusresearch.customauth.types.NoAllowedBrowserFoundException;
@@ -52,6 +52,8 @@ import java.util.concurrent.CompletableFuture;
 
 public class FirstFragment extends Fragment {
 
+    private static final String GOOGLE_CLIENT_ID = "221898609709-obfn3p63741l5333093430j3qeiinaa8.apps.googleusercontent.com";
+    private static final String GOOGLE_VERIFIER = "google-lrc";
     private FragmentFirstBinding binding;
     private LoginVerifier selectedLoginVerifier;
     private CustomAuth torusSdk;
@@ -110,40 +112,44 @@ public class FirstFragment extends Fragment {
 
         binding.googleLogin.setOnClickListener(view1 -> {
             try {
-                selectedLoginVerifier = new LoginVerifier("Google", LoginType.GOOGLE, "221898609709-obfn3p63741l5333093430j3qeiinaa8.apps.googleusercontent.com", "google-lrc");
+                selectedLoginVerifier = new LoginVerifier("Google", LoginType.GOOGLE, GOOGLE_CLIENT_ID, GOOGLE_VERIFIER);
 
-                Auth0ClientOptions.Auth0ClientOptionsBuilder builder = null;
-                if (this.selectedLoginVerifier.getDomain() != null) {
-                    builder = new Auth0ClientOptions.Auth0ClientOptionsBuilder(this.selectedLoginVerifier.getDomain());
-                    builder.setVerifierIdField(this.selectedLoginVerifier.getVerifierIdField());
-                    builder.setVerifierIdCaseSensitive(this.selectedLoginVerifier.isVerfierIdCaseSensitive());
+                Auth0ClientOptionsBuilder builder = null;
+                if (selectedLoginVerifier.getDomain() != null) {
+                    builder = new Auth0ClientOptionsBuilder(selectedLoginVerifier.getDomain());
+                    builder.setVerifierIdField(selectedLoginVerifier.getVerifierIdField());
+                    builder.setVerifierIdCaseSensitive(selectedLoginVerifier.isVerfierIdCaseSensitive());
                 }
                 CompletableFuture<TorusLoginResponse> torusLoginResponseCf;
                 if (builder == null) {
-                    torusLoginResponseCf = this.torusSdk.triggerLogin(new SubVerifierDetails(this.selectedLoginVerifier.getTypeOfLogin(),
-                            this.selectedLoginVerifier.getVerifier(),
-                            this.selectedLoginVerifier.getClientId())
+                    torusLoginResponseCf = torusSdk.triggerLogin(new SubVerifierDetails(selectedLoginVerifier.getTypeOfLogin(),
+                            selectedLoginVerifier.getVerifier(),
+                            selectedLoginVerifier.getClientId())
                             .setPreferCustomTabs(true)
                             .setAllowedBrowsers(allowedBrowsers));
                 } else {
-                    torusLoginResponseCf = this.torusSdk.triggerLogin(new SubVerifierDetails(this.selectedLoginVerifier.getTypeOfLogin(),
-                            this.selectedLoginVerifier.getVerifier(),
-                            this.selectedLoginVerifier.getClientId(), builder.build())
+                    torusLoginResponseCf = torusSdk.triggerLogin(new SubVerifierDetails(
+                            selectedLoginVerifier.getTypeOfLogin(),
+                            selectedLoginVerifier.getVerifier(),
+                            selectedLoginVerifier.getClientId(),
+                            builder.build())
                             .setPreferCustomTabs(true)
                             .setAllowedBrowsers(allowedBrowsers));
                 }
-                binding.createThresholdKey.setEnabled(true);
 
                 torusLoginResponseCf.whenComplete((torusLoginResponse, error) -> {
-                    if (error != null) {
-                        renderError(error);
-                    } else {
-                        String publicAddress = torusLoginResponse.getPublicAddress();
-                        this.postBoxKey = torusLoginResponse.getPrivateKey();
-                        binding.resultView.setText(publicAddress);
-                        // when I try to set enable true here, button does not enabled even if login succeeded
-//                        binding.createThresholdKey.setEnabled(true);
-                    }
+                    activity.runOnUiThread(() -> {
+                        if (error != null) {
+                            renderError(error);
+                        } else {
+                            String publicAddress = torusLoginResponse.getPublicAddress();
+                            this.postBoxKey = torusLoginResponse.getPrivateKey();
+                            binding.resultView.setText("publicAddress: " + publicAddress);
+                            binding.createThresholdKey.setEnabled(true);
+                            binding.googleLogin.setEnabled(false);
+                        }
+                    });
+
                 });
             } catch (Exception e) {
                 throw new RuntimeException(e);
