@@ -54,7 +54,6 @@ public class FirstFragment extends Fragment {
     private FragmentFirstBinding binding;
     private LoginVerifier selectedLoginVerifier;
     private CustomAuth torusSdk;
-    private BigInteger postBoxKey = null;
 
     private final String[] allowedBrowsers = new String[]{
             "com.android.chrome", // Chrome stable
@@ -139,7 +138,7 @@ public class FirstFragment extends Fragment {
                         renderError(error);
                     } else {
                         String publicAddress = torusLoginResponse.getPublicAddress();
-                        postBoxKey = torusLoginResponse.getPrivateKey();
+                        activity.postboxKey = torusLoginResponse.getPrivateKey().toString(16);
                         binding.resultView.setText("publicAddress: " + publicAddress);
                         binding.createThresholdKey.setEnabled(true);
                         binding.googleLogin.setEnabled(false);
@@ -155,22 +154,24 @@ public class FirstFragment extends Fragment {
 //            2. If no shares, then assume new user and try initialize and reconstruct. If success, save share, if fail prompt to reset account.
 //            3. If shares are found, insert them into tkey and then try reconstruct. If success, all good, if fail then share is incorrect, go to prompt to reset account
 
-            String savedPostBoxKey = activity.sharedpreferences.getString(POSTBOX_KEY_ALIAS, null);
-            if(savedPostBoxKey == null) {
-                try {
-                    activity.postboxKey =  PrivateKey.generate().hex;
-                } catch (RuntimeError e) {
-                    throw new RuntimeException(e);
+            if(activity.postboxKey == null){
+                String savedPostBoxKey = activity.sharedpreferences.getString(POSTBOX_KEY_ALIAS, null);
+                if (savedPostBoxKey == null) {
+                    try {
+                        activity.postboxKey = PrivateKey.generate().hex;
+                    } catch (RuntimeError e) {
+                        throw new RuntimeException(e);
+                    }
+                    try {
+                        SharedPreferences.Editor editor = activity.sharedpreferences.edit();
+                        editor.putString(POSTBOX_KEY_ALIAS, activity.postboxKey);
+                        editor.commit();
+                    } catch (RuntimeException e) {
+                        Log.e("MainActivity", "failed to save postbox key");
+                    }
+                } else {
+                    activity.postboxKey = savedPostBoxKey;
                 }
-                try {
-                    SharedPreferences.Editor editor = activity.sharedpreferences.edit();
-                    editor.putString(POSTBOX_KEY_ALIAS, activity.postboxKey);
-                    editor.commit();
-                } catch (RuntimeException e) {
-                    Log.e("MainActivity", "failed to save postbox key");
-                }
-            } else {
-                activity.postboxKey = savedPostBoxKey;
             }
 
 
@@ -490,6 +491,7 @@ public class FirstFragment extends Fragment {
                     } else if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
                         activity.runOnUiThread(() -> {
                             activity.resetState();
+                            binding.googleLogin.setEnabled(true);
                             binding.createThresholdKey.setEnabled(true);
                             binding.reconstructThresholdKey.setEnabled(true);
                             binding.generateNewShare.setEnabled(false);
