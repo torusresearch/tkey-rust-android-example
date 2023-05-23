@@ -137,8 +137,7 @@ public class FirstFragment extends Fragment {
                     } else {
                         String publicAddress = torusLoginResponse.getPublicAddress();
                         activity.postboxKey = torusLoginResponse.getPrivateKey().toString(16);
-                        binding.resultView.setText("publicAddress: ");
-                        binding.resultView.setText(publicAddress);
+                        binding.resultView.append("publicAddress: " + publicAddress);
                         binding.createThresholdKey.setEnabled(true);
                         binding.googleLogin.setEnabled(false);
                     }
