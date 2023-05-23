@@ -131,7 +131,7 @@ public class FirstFragment extends Fragment {
                             .setAllowedBrowsers(allowedBrowsers));
                 }
 
-                torusLoginResponseCf.whenComplete((torusLoginResponse, error) -> activity.runOnUiThread(() -> {
+                torusLoginResponseCf.whenCompleteAsync((torusLoginResponse, error) -> activity.runOnUiThread(() -> {
                     if (error != null) {
                         renderError(error);
                     } else {
