@@ -94,7 +94,7 @@ public class FirstFragment extends Fragment {
         CustomAuthArgs args = new CustomAuthArgs("https://scripts.toruswallet.io/redirect.html", TorusNetwork.TESTNET, "torusapp://org.torusresearch.customauthandroid/redirect");
 
         // Initialize CustomAuth
-        this.torusSdk = new CustomAuth(args, (((MainActivity) requireActivity())));
+        this.torusSdk = new CustomAuth(args, activity);
 
         binding.createThresholdKey.setEnabled(false);
         binding.generateNewShare.setEnabled(false);
