@@ -131,7 +131,7 @@ public class FirstFragment extends Fragment {
                             .setAllowedBrowsers(allowedBrowsers));
                 }
 
-                torusLoginResponseCf.whenCompleteAsync((torusLoginResponse, error) -> activity.runOnUiThread(() -> {
+                torusLoginResponseCf.whenCompleteAsync((torusLoginResponse, error) ->  {
                     if (error != null) {
                         renderError(error);
                     } else {
@@ -141,7 +141,7 @@ public class FirstFragment extends Fragment {
                         binding.createThresholdKey.setEnabled(true);
                         binding.googleLogin.setEnabled(false);
                     }
-                }));
+                });
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
