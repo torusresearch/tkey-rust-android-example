@@ -1,17 +1,16 @@
 package com.example.tkey_android;
 import android.content.SharedPreferences;
-import android.util.Base64;
 import android.util.Log;
 
-import android.os.Build;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+
+import android.widget.TextView;
 import android.widget.ProgressBar;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.RequiresApi;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.fragment.NavHostFragment;
 
@@ -32,17 +31,36 @@ import com.web3auth.tkey.ThresholdKey.StorageLayer;
 import com.web3auth.tkey.ThresholdKey.ThresholdKey;
 
 import org.json.JSONException;
+import org.torusresearch.customauth.CustomAuth;
+import org.torusresearch.customauth.types.Auth0ClientOptions.Auth0ClientOptionsBuilder;
+import org.torusresearch.customauth.types.CustomAuthArgs;
+import org.torusresearch.customauth.types.LoginType;
+import org.torusresearch.customauth.types.NoAllowedBrowserFoundException;
+import org.torusresearch.customauth.types.SubVerifierDetails;
+import org.torusresearch.customauth.types.TorusLoginResponse;
+import org.torusresearch.customauth.types.UserCancelledException;
+import org.torusresearch.customauth.utils.Helpers;
+import org.torusresearch.fetchnodedetails.types.TorusNetwork;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 public class FirstFragment extends Fragment {
 
+    private static final String GOOGLE_CLIENT_ID = "221898609709-obfn3p63741l5333093430j3qeiinaa8.apps.googleusercontent.com";
+    private static final String GOOGLE_VERIFIER = "google-lrc";
     private FragmentFirstBinding binding;
+    private LoginVerifier selectedLoginVerifier;
+    private CustomAuth torusSdk;
+
+    private final String[] allowedBrowsers = new String[]{
+            "com.android.chrome", // Chrome stable
+            "com.google.android.apps.chrome", // Chrome system
+            "com.android.chrome.beta", // Chrome beta
+    };
 
 //    To be used for saving/reading data from shared prefs
-    private final String POSTBOX_KEY_ALIAS = "POSTBOX_KEY";
     private final String SHARE_ALIAS = "SHARE";
 
     @Override
@@ -65,9 +83,20 @@ public class FirstFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
         MainActivity activity = ((MainActivity) requireActivity());
 
+        if (activity.appKey != null) {
+            binding.reconstructThresholdKey.setEnabled(false);
+            binding.createThresholdKey.setEnabled(true);
 
-        binding.createThresholdKey.setEnabled(true);
-        binding.reconstructThresholdKey.setEnabled(false);
+        } else {
+            binding.createThresholdKey.setEnabled(true);
+            binding.reconstructThresholdKey.setEnabled(false);
+        }
+        CustomAuthArgs args = new CustomAuthArgs("https://scripts.toruswallet.io/redirect.html", TorusNetwork.TESTNET, "torusapp://org.torusresearch.customauthandroid/redirect");
+
+        // Initialize CustomAuth
+        this.torusSdk = new CustomAuth(args, activity);
+
+        binding.createThresholdKey.setEnabled(false);
         binding.generateNewShare.setEnabled(false);
         binding.deleteShare.setEnabled(false);
         binding.deleteSeedPhrase.setEnabled(false);
@@ -75,31 +104,53 @@ public class FirstFragment extends Fragment {
         binding.buttonFirst.setOnClickListener(view1 -> NavHostFragment.findNavController(FirstFragment.this)
                 .navigate(R.id.action_FirstFragment_to_SecondFragment));
 
+        binding.googleLogin.setOnClickListener(view1 -> {
+            try {
+                selectedLoginVerifier = new LoginVerifier("Google", LoginType.GOOGLE, GOOGLE_CLIENT_ID, GOOGLE_VERIFIER);
+
+                Auth0ClientOptionsBuilder builder = null;
+                if (selectedLoginVerifier.getDomain() != null) {
+                    builder = new Auth0ClientOptionsBuilder(selectedLoginVerifier.getDomain());
+                    builder.setVerifierIdField(selectedLoginVerifier.getVerifierIdField());
+                    builder.setVerifierIdCaseSensitive(selectedLoginVerifier.isVerfierIdCaseSensitive());
+                }
+                CompletableFuture<TorusLoginResponse> torusLoginResponseCf;
+                if (builder == null) {
+                    torusLoginResponseCf = torusSdk.triggerLogin(new SubVerifierDetails(selectedLoginVerifier.getTypeOfLogin(),
+                            selectedLoginVerifier.getVerifier(),
+                            selectedLoginVerifier.getClientId())
+                            .setPreferCustomTabs(true)
+                            .setAllowedBrowsers(allowedBrowsers));
+                } else {
+                    torusLoginResponseCf = torusSdk.triggerLogin(new SubVerifierDetails(
+                            selectedLoginVerifier.getTypeOfLogin(),
+                            selectedLoginVerifier.getVerifier(),
+                            selectedLoginVerifier.getClientId(),
+                            builder.build())
+                            .setPreferCustomTabs(true)
+                            .setAllowedBrowsers(allowedBrowsers));
+                }
+
+                torusLoginResponseCf.whenCompleteAsync((torusLoginResponse, error) ->  {
+                    if (error != null) {
+                        renderError(error);
+                    } else {
+                        String publicAddress = torusLoginResponse.getPublicAddress();
+                        activity.postboxKey = torusLoginResponse.getPrivateKey().toString(16);
+                        binding.resultView.append("publicAddress: " + publicAddress);
+                        binding.createThresholdKey.setEnabled(true);
+                        binding.googleLogin.setEnabled(false);
+                    }
+                });
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
         binding.createThresholdKey.setOnClickListener(view1 -> {
 //            Logic:
 //            1. Fetch locally available shares and postbox key. Generate a new postboxkey if not available.
 //            2. If no shares, then assume new user and try initialize and reconstruct. If success, save share, if fail prompt to reset account.
 //            3. If shares are found, insert them into tkey and then try reconstruct. If success, all good, if fail then share is incorrect, go to prompt to reset account
-
-            String savedPostBoxKey = activity.sharedpreferences.getString(POSTBOX_KEY_ALIAS, null);
-            if(savedPostBoxKey == null) {
-                try {
-                    activity.postboxKey =  PrivateKey.generate().hex;
-                } catch (RuntimeError e) {
-                    throw new RuntimeException(e);
-                }
-                try {
-                    SharedPreferences.Editor editor = activity.sharedpreferences.edit();
-                    editor.putString(POSTBOX_KEY_ALIAS, activity.postboxKey);
-                    editor.commit();
-                } catch (RuntimeException e) {
-                    Log.e("MainActivity", "failed to save postbox key");
-                }
-            } else {
-                activity.postboxKey = savedPostBoxKey;
-            }
-
-
 
             try {
                 activity.tkeyStorage = new StorageLayer(false, "https://metadata.tor.us", 2);
@@ -189,25 +240,23 @@ public class FirstFragment extends Fragment {
             }
         });
 
-        binding.reconstructThresholdKey.setOnClickListener(view1 -> {
-            activity.appKey.reconstruct(result -> {
-                if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
-                    displayError(((Result.Error<KeyReconstructionDetails>) result).exception, "reconstruct key", view1);
-                } else if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
-                    requireActivity().runOnUiThread(() -> {
-                        try {
-                            KeyReconstructionDetails details = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<KeyReconstructionDetails>) result).data;
-                            binding.generateNewShare.setEnabled(true);
-                            Snackbar snackbar = Snackbar.make(view1, details.getKey(), Snackbar.LENGTH_LONG);
-                            snackbar.show();
-                        } catch (RuntimeError e) {
-                            Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
-                            snackbar.show();
-                        }
-                    });
-                }
-            });
-        });
+        binding.reconstructThresholdKey.setOnClickListener(view1 -> activity.appKey.reconstruct(result -> {
+            if (result instanceof Result.Error) {
+                displayError(((Result.Error<KeyReconstructionDetails>) result).exception, "reconstruct key", view1);
+            } else if (result instanceof Result.Success) {
+                requireActivity().runOnUiThread(() -> {
+                    try {
+                        KeyReconstructionDetails details = ((Result.Success<KeyReconstructionDetails>) result).data;
+                        binding.generateNewShare.setEnabled(true);
+                        Snackbar snackbar = Snackbar.make(view1, details.getKey(), Snackbar.LENGTH_LONG);
+                        snackbar.show();
+                    } catch (RuntimeError e) {
+                        Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
+                        snackbar.show();
+                    }
+                });
+            }
+        }));
 
         binding.generateNewShare.setOnClickListener(view1 -> {
             try {
@@ -418,6 +467,7 @@ public class FirstFragment extends Fragment {
                     } else if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
                         activity.runOnUiThread(() -> {
                             activity.resetState();
+                            binding.googleLogin.setEnabled(true);
                             binding.createThresholdKey.setEnabled(true);
                             binding.reconstructThresholdKey.setEnabled(true);
                             binding.generateNewShare.setEnabled(false);
@@ -532,6 +582,18 @@ public class FirstFragment extends Fragment {
                 throw new RuntimeException(e);
             }
         });
+    }
+
+    private void renderError(Throwable error) {
+        Throwable reason = Helpers.unwrapCompletionException(error);
+        TextView textView = binding.resultView;
+        if (reason instanceof UserCancelledException || reason instanceof NoAllowedBrowserFoundException) {
+            textView.setText(error.getMessage());
+        }
+        else {
+            String errorMessage = getResources().getString(R.string.error_message, error.getMessage());
+            textView.setText(errorMessage);
+        }
     }
 
     @Override
