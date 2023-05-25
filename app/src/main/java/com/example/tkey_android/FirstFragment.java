@@ -100,6 +100,15 @@ public class FirstFragment extends Fragment {
         binding.generateNewShare.setEnabled(false);
         binding.deleteShare.setEnabled(false);
         binding.deleteSeedPhrase.setEnabled(false);
+//        disable add password btn if password is already set for the appKey
+        try {
+            String setAnswer = SecurityQuestionModule.getAnswer(activity.appKey);
+            if(setAnswer != null) {
+                binding.addPassword.setEnabled(false);
+            }
+        } catch (RuntimeError e) {
+            throw new RuntimeException(e);
+        }
 
         binding.buttonFirst.setOnClickListener(view1 -> NavHostFragment.findNavController(FirstFragment.this)
                 .navigate(R.id.action_FirstFragment_to_SecondFragment));
@@ -317,7 +326,9 @@ public class FirstFragment extends Fragment {
 
         binding.addPassword.setOnClickListener(view1 -> {
             try {
-                SecurityQuestionModule.generateNewShare(activity.appKey, "What is the name of your cat?", "blublu", result -> {
+                String question = "what's your password?";
+                String answer = "blublu";
+                SecurityQuestionModule.generateNewShare(activity.appKey, question, answer, result -> {
                     if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
                         requireActivity().runOnUiThread(() -> {
                             Exception e = ((com.web3auth.tkey.ThresholdKey.Common.Result.Error<GenerateShareStoreResult>) result).exception;
@@ -328,9 +339,9 @@ public class FirstFragment extends Fragment {
                         requireActivity().runOnUiThread(() -> {
                             try {
                                 GenerateShareStoreResult share = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<GenerateShareStoreResult>) result).data;
-                                String answer = SecurityQuestionModule.getAnswer(activity.appKey);
+                                String setAnswer = SecurityQuestionModule.getAnswer(activity.appKey);
                                 binding.addPassword.setEnabled(false);
-                                Snackbar snackbar = Snackbar.make(view1, "Added password " + answer + " for share index" + share.getIndex(), Snackbar.LENGTH_LONG);
+                                Snackbar snackbar = Snackbar.make(view1, "Added password " + setAnswer + " for share index" + share.getIndex(), Snackbar.LENGTH_LONG);
                                 snackbar.show();
                             } catch (RuntimeError e) {
                                 Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
@@ -347,7 +358,9 @@ public class FirstFragment extends Fragment {
 
         binding.changePassword.setOnClickListener(view1 -> {
             try {
-                SecurityQuestionModule.changeSecurityQuestionAndAnswer(activity.appKey, "What is the name of your cat?", "Blublu", result -> {
+                String question = "what's your password?";
+                String answer = "blublu";
+                SecurityQuestionModule.changeSecurityQuestionAndAnswer(activity.appKey, question, answer, result -> {
                     if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
                         requireActivity().runOnUiThread(() -> {
                             Exception e = ((com.web3auth.tkey.ThresholdKey.Common.Result.Error<Boolean>) result).exception;
@@ -359,9 +372,9 @@ public class FirstFragment extends Fragment {
                             try {
                                 Boolean changed = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<Boolean>) result).data;
                                 if (changed) {
-                                    String answer = SecurityQuestionModule.getAnswer(activity.appKey);
+                                    String setAnswer = SecurityQuestionModule.getAnswer(activity.appKey);
                                     binding.changePassword.setEnabled(false);
-                                    Snackbar snackbar = Snackbar.make(view1, "Password changed to" + answer, Snackbar.LENGTH_LONG);
+                                    Snackbar snackbar = Snackbar.make(view1, "Password changed to" + setAnswer, Snackbar.LENGTH_LONG);
                                     snackbar.show();
                                 } else {
                                     Snackbar snackbar = Snackbar.make(view1, "Password failed ot be changed", Snackbar.LENGTH_LONG);
@@ -383,7 +396,7 @@ public class FirstFragment extends Fragment {
         binding.showPassword.setOnClickListener(view1 -> {
             try {
                 String answer = SecurityQuestionModule.getAnswer(activity.appKey);
-                Snackbar snackbar = Snackbar.make(view1, "Password currently is" + answer, Snackbar.LENGTH_LONG);
+                Snackbar snackbar = Snackbar.make(view1, "Password currently is " + answer, Snackbar.LENGTH_LONG);
                 snackbar.show();
             } catch (RuntimeError e) {
                 Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
