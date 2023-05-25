@@ -148,6 +148,7 @@ public class FirstFragment extends Fragment {
                             activity.postboxKey = torusLoginResponse.getPrivateKey().toString(16);
                             binding.resultView.append("publicAddress: " + publicAddress);
                             binding.createThresholdKey.setEnabled(true);
+                            binding.addPassword.setEnabled(true);
                             binding.googleLogin.setEnabled(false);
                             hideLoading();
                         });
@@ -190,13 +191,11 @@ public class FirstFragment extends Fragment {
                                         KeyReconstructionDetails reconstructionDetails = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<KeyReconstructionDetails>) reconstruct_result).data;
                                         requireActivity().runOnUiThread(() -> {
                                             try {
-                                                binding.resultView.setText("");
-                                                binding.resultView.append("Final Key\n");
-                                                binding.resultView.append(reconstructionDetails.getKey() + "\n");
-                                                binding.resultView.append("Total Shares" + details.getTotalShares() + "\n");
-                                                binding.resultView.append("Required Shares" + details.getThreshold() + "\n");
+                                                renderTKeyDetails(reconstructionDetails, details);
                                                 binding.createThresholdKey.setEnabled(true);
                                                 binding.reconstructThresholdKey.setEnabled(true);
+                                                binding.addPassword.setEnabled(true);
+
 
                                                 // Persist the share
                                                 List<String> filters = new ArrayList<>();
@@ -232,21 +231,12 @@ public class FirstFragment extends Fragment {
                                             } else if(reconstruct_result_after_import instanceof Result.Success) {
                                                 KeyReconstructionDetails reconstructionDetails = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<KeyReconstructionDetails>) reconstruct_result_after_import).data;
                                                 requireActivity().runOnUiThread(() -> {
-                                                    try {
-                                                        binding.generateNewShare.setEnabled(true);
-                                                        binding.resultView.setText("");
-                                                        binding.resultView.append("Final Key\n");
-                                                        binding.resultView.append(reconstructionDetails.getKey() + "\n");
-                                                        binding.resultView.append("Total Shares" + details.getTotalShares() + "\n");
-                                                        binding.resultView.append("Required Shares" + details.getThreshold() + "\n");
-                                                        binding.createThresholdKey.setEnabled(false);
-                                                        binding.reconstructThresholdKey.setEnabled(true);
-                                                        hideLoading();
-                                                    } catch (RuntimeError e) {
-                                                        Snackbar snackbar = Snackbar.make(view1, "Please reset account, a problem occurred: " + e, Snackbar.LENGTH_LONG);
-                                                        snackbar.show();
-                                                        hideLoading();
-                                                    }
+                                                    renderTKeyDetails(reconstructionDetails, details);
+                                                    binding.generateNewShare.setEnabled(true);
+                                                    binding.createThresholdKey.setEnabled(false);
+                                                    binding.reconstructThresholdKey.setEnabled(true);
+                                                    binding.addPassword.setEnabled(true);
+                                                    hideLoading();
                                                 });
                                             }
                                         });
@@ -303,10 +293,27 @@ public class FirstFragment extends Fragment {
                                 binding.deleteShare.setEnabled(true);
                                 Snackbar snackbar = Snackbar.make(view1, share.getIndex() + "created", Snackbar.LENGTH_LONG);
                                 snackbar.show();
-                                hideLoading();
+
+//                                update result view
+                                activity.appKey.reconstruct((reconstructionDetailsResult) -> {
+                                    try {
+                                        if(reconstructionDetailsResult instanceof  Result.Error) {
+                                            hideLoading();
+                                            renderError(((Result.Error<KeyReconstructionDetails>) reconstructionDetailsResult).exception);
+                                        } else if(reconstructionDetailsResult instanceof Result.Success) {
+                                            KeyDetails details = activity.appKey.getKeyDetails();
+                                            renderTKeyDetails(((Result.Success<KeyReconstructionDetails>) reconstructionDetailsResult).data, details);
+                                            hideLoading();
+                                        }
+
+                                    } catch (RuntimeError e) {
+                                        hideLoading();
+                                        renderError(e);
+                                    }
+
+                                });
                             } catch (RuntimeError e) {
-                                Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
-                                snackbar.show();
+                                renderError(e);
                                 hideLoading();
                             }
                         });
@@ -336,7 +343,26 @@ public class FirstFragment extends Fragment {
                         Snackbar snackbar;
                         snackbar = Snackbar.make(view1, index + " deleted", Snackbar.LENGTH_LONG);
                         snackbar.show();
-                        hideLoading();
+//                                update result view
+                        activity.appKey.reconstruct((reconstructionDetailsResult) -> {
+                            try {
+                                if(reconstructionDetailsResult instanceof  Result.Error) {
+                                    hideLoading();
+                                    renderError(((Result.Error<KeyReconstructionDetails>) reconstructionDetailsResult).exception);
+                                } else if(reconstructionDetailsResult instanceof Result.Success) {
+                                    KeyDetails details = activity.appKey.getKeyDetails();
+                                    renderTKeyDetails(((Result.Success<KeyReconstructionDetails>) reconstructionDetailsResult).data, details);
+                                    hideLoading();
+                                    binding.deleteShare.setEnabled(false);
+                                }
+
+                            } catch (RuntimeError e) {
+                                hideLoading();
+                                renderError(e);
+                            }
+
+                        });
+
                     }
                 });
             } catch (RuntimeError | JSONException e) {
@@ -366,7 +392,23 @@ public class FirstFragment extends Fragment {
                                 binding.addPassword.setEnabled(false);
                                 Snackbar snackbar = Snackbar.make(view1, "Added password " + setAnswer + " for share index" + share.getIndex(), Snackbar.LENGTH_LONG);
                                 snackbar.show();
-                                hideLoading();
+//                                update result view
+                                activity.appKey.reconstruct((reconstructionDetailsResult) -> {
+                                    try {
+                                        if(reconstructionDetailsResult instanceof  Result.Error) {
+                                            hideLoading();
+                                            renderError(((Result.Error<KeyReconstructionDetails>) reconstructionDetailsResult).exception);
+                                        } else if(reconstructionDetailsResult instanceof Result.Success) {
+                                            KeyDetails details = activity.appKey.getKeyDetails();
+                                            renderTKeyDetails(((Result.Success<KeyReconstructionDetails>) reconstructionDetailsResult).data, details);
+                                            hideLoading();
+                                        }
+                                    } catch (RuntimeError e) {
+                                        hideLoading();
+                                        renderError(e);
+                                    }
+
+                                });
                             } catch (RuntimeError e) {
                                 Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
                                 snackbar.show();
@@ -519,6 +561,7 @@ public class FirstFragment extends Fragment {
                             binding.generateNewShare.setEnabled(false);
                             binding.deleteShare.setEnabled(false);
                             binding.deleteSeedPhrase.setEnabled(false);
+                            binding.addPassword.setEnabled(false);
                             binding.resultView.setText("");
                             Snackbar snackbar = Snackbar.make(view1, "Account reset successful", Snackbar.LENGTH_LONG);
                             snackbar.show();
@@ -643,15 +686,32 @@ public class FirstFragment extends Fragment {
     }
 
     private void renderError(Throwable error) {
-        Throwable reason = Helpers.unwrapCompletionException(error);
-        TextView textView = binding.resultView;
-        if (reason instanceof UserCancelledException || reason instanceof NoAllowedBrowserFoundException) {
-            textView.setText(error.getMessage());
-        }
-        else {
-            String errorMessage = getResources().getString(R.string.error_message, error.getMessage());
-            textView.setText(errorMessage);
-        }
+        requireActivity().runOnUiThread(() -> {
+            Throwable reason = Helpers.unwrapCompletionException(error);
+            TextView textView = binding.resultView;
+            if (reason instanceof UserCancelledException || reason instanceof NoAllowedBrowserFoundException) {
+                textView.setText(error.getMessage());
+            }
+            else {
+                String errorMessage = getResources().getString(R.string.error_message, error.getMessage());
+                textView.setText(errorMessage);
+            }
+        });
+    }
+
+    private void renderTKeyDetails(KeyReconstructionDetails reconstructionDetails, KeyDetails details) {
+        requireActivity().runOnUiThread(() -> {
+            try {
+                binding.resultView.setText("");
+                binding.resultView.append("Final Key\n");
+                binding.resultView.append(reconstructionDetails.getKey() + "\n");
+                binding.resultView.append("Total Shares" + details.getTotalShares() + "\n");
+                binding.resultView.append("Required Shares" + details.getThreshold() + "\n");
+            } catch (RuntimeError e) {
+                renderError(e);
+            }
+        });
+
     }
 
     @Override
