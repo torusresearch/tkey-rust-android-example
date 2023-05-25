@@ -71,13 +71,6 @@ public class FirstFragment extends Fragment {
         return binding.getRoot();
     }
 
-     private void displayError(Exception e, String context, View view) {
-        requireActivity().runOnUiThread(() -> {
-            Snackbar snackbar = Snackbar.make(view, "A problem occurred in " + context + " : "  + e.toString(), Snackbar.LENGTH_LONG);
-            snackbar.show();
-        });
-    }
-
     private void showLoading() {
         requireActivity().runOnUiThread(() -> {
             ProgressBar pb = binding.loadingIndicator;
@@ -183,14 +176,16 @@ public class FirstFragment extends Fragment {
                         if (result instanceof Result.Error) {
                             Exception ee = ((Result.Error<KeyDetails>) result).exception;
                             ee.printStackTrace();
-                            displayError(ee, "initializing tkey", view1);
+                            renderError(ee);
+//                            displayException(ee, "initializing tkey", view1);
                         } else if (result instanceof Result.Success) {
                             KeyDetails details = ((Result.Success<KeyDetails>) result).data;
                             if (share == null) {
                                 // 2. If no shares, then assume new user and try initialize and reconstruct. If success, save share, if fail prompt to reset account
                                 activity.appKey.reconstruct(reconstruct_result -> {
                                     if (reconstruct_result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
-                                        displayError((((Result.Error<KeyReconstructionDetails>) reconstruct_result).exception), "reconstructing key", view1);
+                                        renderError(((Result.Error<KeyReconstructionDetails>) reconstruct_result).exception);
+//                                        displayException((((Result.Error<KeyReconstructionDetails>) reconstruct_result).exception), "reconstructing key", view1);
                                     } else if (reconstruct_result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
                                         KeyReconstructionDetails reconstructionDetails = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<KeyReconstructionDetails>) reconstruct_result).data;
                                         requireActivity().runOnUiThread(() -> {
@@ -227,11 +222,13 @@ public class FirstFragment extends Fragment {
                                 // 3. If shares are found, insert them into tkey and then try reconstruct. If success, all good, if fail then share is incorrect, go to prompt to reset account
                                 activity.appKey.inputShare(share, null, input_share_result -> {
                                     if(input_share_result instanceof Result.Error) {
-                                        displayError(((Result.Error<Void>) input_share_result).exception, "input share", view1);
+                                        renderError(((Result.Error<Void>) input_share_result).exception);
+//                                        displayException(((Result.Error<Void>) input_share_result).exception, "input share", view1);
                                     } else if (input_share_result instanceof Result.Success) {
                                         activity.appKey.reconstruct(reconstruct_result_after_import -> {
                                             if(reconstruct_result_after_import instanceof Result.Error) {
-                                                displayError(((Result.Error<KeyReconstructionDetails>) reconstruct_result_after_import).exception, "", view1);
+                                                renderError(((Result.Error<KeyReconstructionDetails>) reconstruct_result_after_import).exception);
+//                                                displayException(((Result.Error<KeyReconstructionDetails>) reconstruct_result_after_import).exception, "", view1);
                                             } else if(reconstruct_result_after_import instanceof Result.Success) {
                                                 KeyReconstructionDetails reconstructionDetails = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<KeyReconstructionDetails>) reconstruct_result_after_import).data;
                                                 requireActivity().runOnUiThread(() -> {
@@ -268,7 +265,8 @@ public class FirstFragment extends Fragment {
         binding.reconstructThresholdKey.setOnClickListener(view1 -> activity.appKey.reconstruct(result -> {
             showLoading();
             if (result instanceof Result.Error) {
-                displayError(((Result.Error<KeyReconstructionDetails>) result).exception, "reconstruct key", view1);
+                renderError(((Result.Error<KeyReconstructionDetails>) result).exception);
+//                displayException(((Result.Error<KeyReconstructionDetails>) result).exception, "reconstruct key", view1);
                 hideLoading();
             } else if (result instanceof Result.Success) {
                 requireActivity().runOnUiThread(() -> {
@@ -628,6 +626,18 @@ public class FirstFragment extends Fragment {
                 snackbar.show();
             } catch (RuntimeError | JSONException e) {
                 throw new RuntimeException(e);
+            }
+        });
+
+        binding.getKeyDetails.setOnClickListener(view1 -> {
+            try {
+                KeyDetails keyDetails = activity.appKey.getKeyDetails();
+                String snackbarContent = "There are " + (keyDetails.getTotalShares()) + " available shares. " + (keyDetails.getRequiredShares()) + " are required to reconstruct the private key";
+                Snackbar snackbar = Snackbar.make(view1, snackbarContent, Snackbar.LENGTH_LONG);
+                snackbar.show();
+            } catch (RuntimeError e) {
+                renderError(e);
+//                displayException(e, "key details", view1);
             }
         });
     }
