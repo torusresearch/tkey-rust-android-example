@@ -442,7 +442,7 @@ public class FirstFragment extends Fragment {
                                         snackbar.show();
                                         hideLoading();
                                     } else {
-                                        Snackbar snackbar = Snackbar.make(view1, "Password failed ot be changed", Snackbar.LENGTH_LONG);
+                                        Snackbar snackbar = Snackbar.make(view1, "Password failed to be changed", Snackbar.LENGTH_LONG);
                                         snackbar.show();
                                         hideLoading();
                                     }
