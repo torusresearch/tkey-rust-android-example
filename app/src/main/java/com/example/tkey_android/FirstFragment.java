@@ -1,11 +1,15 @@
 package com.example.tkey_android;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.SharedPreferences;
 
 import android.os.Bundle;
+import android.text.InputType;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.ProgressBar;
 
@@ -43,6 +47,7 @@ import org.torusresearch.fetchnodedetails.types.TorusNetwork;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 
 public class FirstFragment extends Fragment {
@@ -375,7 +380,7 @@ public class FirstFragment extends Fragment {
             showLoading();
             try {
                 String question = "what's your password?";
-                String answer = "blublu";
+                String answer = generateRandomPassword(12);
                 SecurityQuestionModule.generateNewShare(activity.appKey, question, answer, result -> {
                     if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
                         requireActivity().runOnUiThread(() -> {
@@ -390,6 +395,7 @@ public class FirstFragment extends Fragment {
                                 GenerateShareStoreResult share = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<GenerateShareStoreResult>) result).data;
                                 String setAnswer = SecurityQuestionModule.getAnswer(activity.appKey);
                                 binding.addPassword.setEnabled(false);
+                                binding.changePassword.setEnabled(true);
                                 Snackbar snackbar = Snackbar.make(view1, "Added password " + setAnswer + " for share index" + share.getIndex(), Snackbar.LENGTH_LONG);
                                 snackbar.show();
 //                                update result view
@@ -425,47 +431,76 @@ public class FirstFragment extends Fragment {
         });
 
         binding.changePassword.setOnClickListener(view1 -> {
-            showLoading();
-            try {
-                String question = "what's your password?";
-                String answer = "blublu";
-                SecurityQuestionModule.changeSecurityQuestionAndAnswer(activity.appKey, question, answer, result -> {
-                    if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
-                        requireActivity().runOnUiThread(() -> {
-                            Exception e = ((com.web3auth.tkey.ThresholdKey.Common.Result.Error<Boolean>) result).exception;
-                            Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e.toString(), Snackbar.LENGTH_LONG);
-                            snackbar.show();
-                            hideLoading();
-                        });
-                    } else if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
-                        requireActivity().runOnUiThread(() -> {
-                            try {
-                                Boolean changed = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<Boolean>) result).data;
-                                if (changed) {
-                                    String setAnswer = SecurityQuestionModule.getAnswer(activity.appKey);
-                                    binding.changePassword.setEnabled(false);
-                                    Snackbar snackbar = Snackbar.make(view1, "Password changed to" + setAnswer, Snackbar.LENGTH_LONG);
-                                    snackbar.show();
+
+            AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+            builder.setTitle("Enter Password");
+
+            // Create an EditText for password input
+            final EditText passwordEditText = new EditText(getContext());
+            passwordEditText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+            builder.setView(passwordEditText);
+
+            builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    String password = passwordEditText.getText().toString();
+                    // Handle the entered password
+                    // ...
+                    showLoading();
+                    try {
+                        String question = "what's your password?";
+                        String answer = password;
+                        SecurityQuestionModule.changeSecurityQuestionAndAnswer(activity.appKey, question, answer, result -> {
+                            if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
+                                requireActivity().runOnUiThread(() -> {
+                                    renderError(((Result.Error<Boolean>) result).exception);
                                     hideLoading();
-                                } else {
-                                    Snackbar snackbar = Snackbar.make(view1, "Password failed ot be changed", Snackbar.LENGTH_LONG);
-                                    snackbar.show();
-                                    hideLoading();
-                                }
-                            } catch (RuntimeError e) {
-                                Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
-                                snackbar.show();
-                                hideLoading();
+                                });
+                            } else if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
+                                requireActivity().runOnUiThread(() -> {
+                                    try {
+                                        Boolean changed = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<Boolean>) result).data;
+                                        if (changed) {
+                                            String setAnswer = SecurityQuestionModule.getAnswer(activity.appKey);
+                                            binding.changePassword.setEnabled(false);
+                                            Snackbar snackbar = Snackbar.make(view1, "Password changed to" + setAnswer, Snackbar.LENGTH_LONG);
+                                            snackbar.show();
+                                            hideLoading();
+                                        } else {
+                                            Snackbar snackbar = Snackbar.make(view1, "Password failed ot be changed", Snackbar.LENGTH_LONG);
+                                            snackbar.show();
+                                            hideLoading();
+                                        }
+                                    } catch (RuntimeError e) {
+                                        Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
+                                        snackbar.show();
+                                        hideLoading();
+                                    }
+                                });
                             }
                         });
+                    } catch (Exception e) {
+                        renderError(e);
+                        hideLoading();
                     }
-                });
-            } catch (Exception e) {
-                Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e, Snackbar.LENGTH_LONG);
-                snackbar.show();
-                hideLoading();
-            }
+
+                }
+            });
+
+            builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    dialog.cancel();
+                }
+            });
+
+            AlertDialog dialog = builder.create();
+            dialog.show();
+
+
         });
+
+
 
         binding.showPassword.setOnClickListener(view1 -> {
             try {
@@ -712,6 +747,23 @@ public class FirstFragment extends Fragment {
             }
         });
 
+    }
+
+    public String generateRandomPassword(int length) {
+        // Define the characters from which the password will be formed
+        String allowedChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()";
+
+        Random random = new Random();
+        StringBuilder password = new StringBuilder();
+
+        // Generate the password by randomly selecting characters from the allowedChars string
+        for (int i = 0; i < length; i++) {
+            int randomIndex = random.nextInt(allowedChars.length());
+            char randomChar = allowedChars.charAt(randomIndex);
+            password.append(randomChar);
+        }
+
+        return password.toString();
     }
 
     @Override
