@@ -95,7 +95,6 @@ public class FirstFragment extends Fragment {
         if (activity.appKey != null) {
             binding.reconstructThresholdKey.setEnabled(false);
             binding.createThresholdKey.setEnabled(true);
-
         } else {
             binding.createThresholdKey.setEnabled(true);
             binding.reconstructThresholdKey.setEnabled(false);
@@ -493,6 +492,24 @@ public class FirstFragment extends Fragment {
                     Snackbar snackbar;
                     if (set) {
                         snackbar = Snackbar.make(view1, "Seed phrase set", Snackbar.LENGTH_LONG);
+                        // update result view
+                        activity.appKey.reconstruct((reconstructionDetailsResult) -> {
+                            try {
+                                if (reconstructionDetailsResult instanceof Result.Error) {
+                                    hideLoading();
+                                    renderError(((Result.Error<KeyReconstructionDetails>) reconstructionDetailsResult).exception);
+                                } else if (reconstructionDetailsResult instanceof Result.Success) {
+                                    KeyDetails details = activity.appKey.getKeyDetails();
+                                    renderTKeyDetails(((Result.Success<KeyReconstructionDetails>) reconstructionDetailsResult).data, details);
+                                    hideLoading();
+                                }
+
+                            } catch (RuntimeError e) {
+                                hideLoading();
+                                renderError(e);
+                            }
+
+                        });
                     } else {
                         snackbar = Snackbar.make(view1, "Failed to set seed phrase", Snackbar.LENGTH_LONG);
                     }
@@ -588,6 +605,24 @@ public class FirstFragment extends Fragment {
                         Boolean deleted = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<Boolean>) result).data;
                         Snackbar snackbar;
                         if (deleted) {
+                            // update result view
+                            activity.appKey.reconstruct((reconstructionDetailsResult) -> {
+                                try {
+                                    if (reconstructionDetailsResult instanceof Result.Error) {
+                                        hideLoading();
+                                        renderError(((Result.Error<KeyReconstructionDetails>) reconstructionDetailsResult).exception);
+                                    } else if (reconstructionDetailsResult instanceof Result.Success) {
+                                        KeyDetails details = activity.appKey.getKeyDetails();
+                                        renderTKeyDetails(((Result.Success<KeyReconstructionDetails>) reconstructionDetailsResult).data, details);
+                                        hideLoading();
+                                    }
+
+                                } catch (RuntimeError e) {
+                                    hideLoading();
+                                    renderError(e);
+                                }
+
+                            });
                             snackbar = Snackbar.make(view1, "Phrase Deleted", Snackbar.LENGTH_LONG);
                         } else {
                             snackbar = Snackbar.make(view1, "Phrase failed ot be deleted", Snackbar.LENGTH_LONG);
