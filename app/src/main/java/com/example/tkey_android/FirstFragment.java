@@ -325,10 +325,12 @@ public class FirstFragment extends Fragment {
                             hideLoading();
                         });
                     } else if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
-                        binding.resetAccount.setEnabled(true);
-                        Snackbar snackbar;
-                        snackbar = Snackbar.make(view1, index + " deleted", Snackbar.LENGTH_LONG);
-                        snackbar.show();
+                        requireActivity().runOnUiThread(() -> {
+                            binding.resetAccount.setEnabled(true);
+                            Snackbar snackbar;
+                            snackbar = Snackbar.make(view1, index + " deleted", Snackbar.LENGTH_LONG);
+                            snackbar.show();
+                        });
                         // update result view
                         activity.appKey.reconstruct((reconstructionDetailsResult) -> {
                             try {
@@ -337,11 +339,12 @@ public class FirstFragment extends Fragment {
                                     renderError(((Result.Error<KeyReconstructionDetails>) reconstructionDetailsResult).exception);
                                 } else if (reconstructionDetailsResult instanceof Result.Success) {
                                     KeyDetails details = activity.appKey.getKeyDetails();
-                                    renderTKeyDetails(((Result.Success<KeyReconstructionDetails>) reconstructionDetailsResult).data, details);
-                                    hideLoading();
-                                    binding.deleteShare.setEnabled(false);
+                                    requireActivity().runOnUiThread(() -> {
+                                        renderTKeyDetails(((Result.Success<KeyReconstructionDetails>) reconstructionDetailsResult).data, details);
+                                        hideLoading();
+                                        binding.deleteShare.setEnabled(false);
+                                    });
                                 }
-
                             } catch (RuntimeError e) {
                                 renderError(e);
                                 hideLoading();
