@@ -92,22 +92,13 @@ public class FirstFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
         MainActivity activity = ((MainActivity) requireActivity());
 
-        if (activity.appKey != null) {
-            binding.reconstructThresholdKey.setEnabled(false);
-            binding.createThresholdKey.setEnabled(true);
-        } else {
-            binding.createThresholdKey.setEnabled(true);
-            binding.reconstructThresholdKey.setEnabled(false);
-        }
+        userHasNotLoggedInWithGoogle();
+
         CustomAuthArgs args = new CustomAuthArgs("https://scripts.toruswallet.io/redirect.html", TorusNetwork.TESTNET, "torusapp://org.torusresearch.customauthandroid/redirect");
 
         // Initialize CustomAuth
         this.torusSdk = new CustomAuth(args, activity);
 
-        binding.createThresholdKey.setEnabled(false);
-        binding.generateNewShare.setEnabled(false);
-        binding.deleteShare.setEnabled(false);
-        binding.deleteSeedPhrase.setEnabled(false);
 
         binding.buttonFirst.setOnClickListener(view1 -> NavHostFragment.findNavController(FirstFragment.this)
                 .navigate(R.id.action_FirstFragment_to_SecondFragment));
@@ -149,9 +140,7 @@ public class FirstFragment extends Fragment {
                             String publicAddress = torusLoginResponse.getPublicAddress();
                             activity.postboxKey = torusLoginResponse.getPrivateKey().toString(16);
                             binding.resultView.append("publicAddress: " + publicAddress);
-                            binding.createThresholdKey.setEnabled(true);
-                            binding.addPassword.setEnabled(true);
-                            binding.googleLogin.setEnabled(false);
+                            userHasLoggedInWithGoogle();
                             hideLoading();
                         });
 
@@ -187,10 +176,7 @@ public class FirstFragment extends Fragment {
                                     requireActivity().runOnUiThread(() -> {
                                         try {
                                             renderTKeyDetails(reconstructionDetails, details);
-                                            binding.createThresholdKey.setEnabled(true);
-                                            binding.reconstructThresholdKey.setEnabled(true);
-                                            binding.addPassword.setEnabled(true);
-
+                                            userHasCreatedTkey();
                                             // Persist the share
                                             List<String> filters = new ArrayList<>();
                                             filters.add("1");
@@ -223,10 +209,7 @@ public class FirstFragment extends Fragment {
                                             KeyReconstructionDetails reconstructionDetails = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<KeyReconstructionDetails>) reconstruct_result_after_import).data;
                                             requireActivity().runOnUiThread(() -> {
                                                 renderTKeyDetails(reconstructionDetails, details);
-                                                binding.generateNewShare.setEnabled(true);
-                                                binding.createThresholdKey.setEnabled(false);
-                                                binding.reconstructThresholdKey.setEnabled(true);
-                                                binding.addPassword.setEnabled(true);
+                                                userHasCreatedTkey();
                                                 hideLoading();
                                             });
                                         }
@@ -500,6 +483,9 @@ public class FirstFragment extends Fragment {
                                     renderError(((Result.Error<KeyReconstructionDetails>) reconstructionDetailsResult).exception);
                                 } else if (reconstructionDetailsResult instanceof Result.Success) {
                                     KeyDetails details = activity.appKey.getKeyDetails();
+                                    binding.setSeedPhrase.setEnabled(false);
+                                    binding.changeSeedPhrase.setEnabled(true);
+                                    binding.deleteSeedPhrase.setEnabled(true);
                                     renderTKeyDetails(((Result.Success<KeyReconstructionDetails>) reconstructionDetailsResult).data, details);
                                     hideLoading();
                                 }
@@ -532,6 +518,7 @@ public class FirstFragment extends Fragment {
                     if (changed) {
                         Snackbar snackbar = Snackbar.make(view1, "Seed phrase changed", Snackbar.LENGTH_LONG);
                         snackbar.show();
+                        binding.changeSeedPhrase.setEnabled(false);
                         binding.deleteSeedPhrase.setEnabled(true);
                     } else {
                         Snackbar snackbar = Snackbar.make(view1, "Failed to change seed phrase", Snackbar.LENGTH_LONG);
@@ -569,13 +556,7 @@ public class FirstFragment extends Fragment {
                     } else if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
                         activity.runOnUiThread(() -> {
                             activity.resetState();
-                            binding.googleLogin.setEnabled(true);
-                            binding.createThresholdKey.setEnabled(false);
-                            binding.reconstructThresholdKey.setEnabled(false);
-                            binding.generateNewShare.setEnabled(false);
-                            binding.deleteShare.setEnabled(false);
-                            binding.deleteSeedPhrase.setEnabled(false);
-                            binding.addPassword.setEnabled(false);
+                            userHasNotLoggedInWithGoogle();
                             binding.resultView.setText("");
                             Snackbar snackbar = Snackbar.make(view1, "Account reset successful", Snackbar.LENGTH_LONG);
                             snackbar.show();
@@ -613,6 +594,7 @@ public class FirstFragment extends Fragment {
                                         renderError(((Result.Error<KeyReconstructionDetails>) reconstructionDetailsResult).exception);
                                     } else if (reconstructionDetailsResult instanceof Result.Success) {
                                         KeyDetails details = activity.appKey.getKeyDetails();
+                                        binding.deleteSeedPhrase.setEnabled(false);
                                         renderTKeyDetails(((Result.Success<KeyReconstructionDetails>) reconstructionDetailsResult).data, details);
                                         hideLoading();
                                     }
@@ -719,6 +701,79 @@ public class FirstFragment extends Fragment {
                 String errorMessage = getResources().getString(R.string.error_message, error.getMessage());
                 textView.setText(errorMessage);
             }
+        });
+    }
+
+    private void userHasNotLoggedInWithGoogle() {
+        requireActivity().runOnUiThread(() -> {
+            binding.googleLogin.setEnabled(true);
+            binding.createThresholdKey.setEnabled(false);
+            binding.reconstructThresholdKey.setEnabled(false);
+            binding.generateNewShare.setEnabled(false);
+            binding.deleteShare.setEnabled(false);
+            binding.deleteSeedPhrase.setEnabled(false);
+            binding.resetAccount.setEnabled(false);
+            binding.getKeyDetails.setEnabled(false);
+            binding.addPassword.setEnabled(false);
+            binding.changePassword.setEnabled(false);
+            binding.showPassword.setEnabled(false);
+            binding.setSeedPhrase.setEnabled(false);
+            binding.deleteSeedPhrase.setEnabled(false);
+            binding.exportShare.setEnabled(false);
+            binding.getPrivateKey.setEnabled(false);
+            binding.setPrivateKey.setEnabled(false);
+            binding.changeSeedPhrase.setEnabled(false);
+            binding.getSeedPhrase.setEnabled(false);
+            binding.getAccounts.setEnabled(false);
+        });
+    }
+
+    private void userHasLoggedInWithGoogle() {
+        requireActivity().runOnUiThread(() -> {
+            binding.googleLogin.setEnabled(false);
+            binding.createThresholdKey.setEnabled(true);
+            binding.reconstructThresholdKey.setEnabled(false);
+            binding.generateNewShare.setEnabled(false);
+            binding.deleteShare.setEnabled(false);
+            binding.deleteSeedPhrase.setEnabled(false);
+            binding.resetAccount.setEnabled(true);
+            binding.getKeyDetails.setEnabled(false);
+            binding.addPassword.setEnabled(false);
+            binding.changePassword.setEnabled(false);
+            binding.showPassword.setEnabled(false);
+            binding.setSeedPhrase.setEnabled(false);
+            binding.deleteSeedPhrase.setEnabled(false);
+            binding.exportShare.setEnabled(false);
+            binding.getPrivateKey.setEnabled(false);
+            binding.setPrivateKey.setEnabled(false);
+            binding.changeSeedPhrase.setEnabled(false);
+            binding.getSeedPhrase.setEnabled(false);
+            binding.getAccounts.setEnabled(false);
+        });
+    }
+
+    private void userHasCreatedTkey() {
+        requireActivity().runOnUiThread(() -> {
+            binding.googleLogin.setEnabled(false);
+            binding.createThresholdKey.setEnabled(false);
+            binding.reconstructThresholdKey.setEnabled(true);
+            binding.generateNewShare.setEnabled(true);
+            binding.deleteShare.setEnabled(true);
+            binding.deleteSeedPhrase.setEnabled(true);
+            binding.resetAccount.setEnabled(true);
+            binding.getKeyDetails.setEnabled(true);
+            binding.addPassword.setEnabled(true);
+            binding.changePassword.setEnabled(true);
+            binding.showPassword.setEnabled(true);
+            binding.setSeedPhrase.setEnabled(true);
+            binding.deleteSeedPhrase.setEnabled(true);
+            binding.exportShare.setEnabled(true);
+            binding.getPrivateKey.setEnabled(true);
+            binding.setPrivateKey.setEnabled(true);
+            binding.changeSeedPhrase.setEnabled(true);
+            binding.getSeedPhrase.setEnabled(true);
+            binding.getAccounts.setEnabled(false);
+
         });
     }
 
