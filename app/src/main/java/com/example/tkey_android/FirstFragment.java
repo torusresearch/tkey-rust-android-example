@@ -56,6 +56,7 @@ public class FirstFragment extends Fragment {
     private LoginVerifier selectedLoginVerifier;
     private CustomAuth torusSdk;
 
+
     private final String[] allowedBrowsers = new String[]{
             "com.android.chrome", // Chrome stable
             "com.google.android.apps.chrome", // Chrome system
@@ -64,6 +65,8 @@ public class FirstFragment extends Fragment {
 
     //    To be used for saving/reading data from shared prefs
     private final String SHARE_ALIAS = "SHARE";
+
+    private final String SHARE_INDEX_GENERATED_ALIAS = "SHARE_INDEX_GENERATED_ALIAS";
 
     @Override
     public View onCreateView(
@@ -260,6 +263,8 @@ public class FirstFragment extends Fragment {
                         requireActivity().runOnUiThread(() -> {
                             try {
                                 GenerateShareStoreResult share = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<GenerateShareStoreResult>) result).data;
+                                String shareIndexCreated = share.getIndex();
+                                activity.sharedpreferences.edit().putString(SHARE_INDEX_GENERATED_ALIAS, shareIndexCreated).apply();
                                 binding.deleteShare.setEnabled(true);
                                 Snackbar snackbar = Snackbar.make(view1, share.getIndex() + "created", Snackbar.LENGTH_LONG);
                                 snackbar.show();
@@ -296,17 +301,17 @@ public class FirstFragment extends Fragment {
 
         binding.deleteShare.setOnClickListener(view1 -> {
             showLoading();
-            try {
-                ArrayList<String> indexes = activity.appKey.getShareIndexes();
-                String index = indexes.get(indexes.size() - 1);
+            String shareIndexCreated = activity.sharedpreferences.getString(SHARE_INDEX_GENERATED_ALIAS, null);
+            if(shareIndexCreated != null) {
+                String index = shareIndexCreated;
                 activity.appKey.deleteShare(index, result -> {
-                    if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
+                    if (result instanceof Result.Error) {
                         requireActivity().runOnUiThread(() -> {
-                            Exception e = ((com.web3auth.tkey.ThresholdKey.Common.Result.Error<Void>) result).exception;
+                            Exception e = ((Result.Error<Void>) result).exception;
                             renderError(e);
                             hideLoading();
                         });
-                    } else if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
+                    } else if (result instanceof Result.Success) {
                         requireActivity().runOnUiThread(() -> {
                             binding.resetAccount.setEnabled(true);
                             Snackbar snackbar;
@@ -336,8 +341,12 @@ public class FirstFragment extends Fragment {
 
                     }
                 });
-            } catch (RuntimeError | JSONException e) {
-                renderError(e);
+            } else {
+                requireActivity().runOnUiThread(() -> {
+                    Snackbar snackbar;
+                    snackbar = Snackbar.make(view1, "No share index found", Snackbar.LENGTH_LONG);
+                    snackbar.show();
+                });
             }
         });
 
