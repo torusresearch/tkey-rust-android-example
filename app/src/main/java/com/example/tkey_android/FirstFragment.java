@@ -68,7 +68,9 @@ public class FirstFragment extends Fragment {
 
     private final String SHARE_INDEX_GENERATED_ALIAS = "SHARE_INDEX_GENERATED_ALIAS";
     private final String ADD_PASSWORD_SET_ALIAS = "ADD_PASSWORD_SET_ALIAS";
+
     private final String SEED_PHRASE_SET_ALIAS = "SEED_PHRASE_SET_ALIAS";
+    private final String SEED_PHRASE_ALIAS = "SEED_PHRASE_ALIAS";
 
     @Override
     public View onCreateView(
@@ -487,6 +489,7 @@ public class FirstFragment extends Fragment {
                 } else if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
                     Boolean set = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<Boolean>) result).data;
                     if (set) {
+                        activity.sharedpreferences.edit().putString(SEED_PHRASE_ALIAS, phrase).apply();
                         requireActivity().runOnUiThread(() -> {
                             Snackbar snackbar;
                             snackbar = Snackbar.make(view1, "Seed phrase set", Snackbar.LENGTH_LONG);
@@ -541,14 +544,19 @@ public class FirstFragment extends Fragment {
                 } else if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
                     Boolean changed = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<Boolean>) result).data;
                     if (changed) {
-                        Snackbar snackbar = Snackbar.make(view1, "Seed phrase changed", Snackbar.LENGTH_LONG);
-                        snackbar.show();
-                        binding.changeSeedPhrase.setEnabled(false);
-                        binding.deleteSeedPhrase.setEnabled(true);
+                        activity.sharedpreferences.edit().putString(SEED_PHRASE_ALIAS, newPhrase).apply();
+                        requireActivity().runOnUiThread(() -> {
+                            Snackbar snackbar = Snackbar.make(view1, "Seed phrase changed", Snackbar.LENGTH_LONG);
+                            snackbar.show();
+                            binding.changeSeedPhrase.setEnabled(false);
+                            binding.deleteSeedPhrase.setEnabled(true);
+                        });
                         hideLoading();
                     } else {
-                        Snackbar snackbar = Snackbar.make(view1, "Failed to change seed phrase", Snackbar.LENGTH_LONG);
-                        snackbar.show();
+                        requireActivity().runOnUiThread(() -> {
+                            Snackbar snackbar = Snackbar.make(view1, "Failed to change seed phrase", Snackbar.LENGTH_LONG);
+                            snackbar.show();
+                        });
                         hideLoading();
                     }
                 }
@@ -601,9 +609,11 @@ public class FirstFragment extends Fragment {
         });
 
         binding.deleteSeedPhrase.setOnClickListener(view1 -> {
+            showLoading();
             try {
                 String newPhrase = "object brass success calm lizard science syrup planet exercise parade honey impulse";
-                SeedPhraseModule.deletePhrase(activity.appKey, newPhrase, result -> {
+                String phrase = activity.sharedpreferences.getString(SEED_PHRASE_ALIAS, newPhrase);
+                SeedPhraseModule.deletePhrase(activity.appKey, phrase, result -> {
                     if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
                         requireActivity().runOnUiThread(() -> {
                             Exception e = ((com.web3auth.tkey.ThresholdKey.Common.Result.Error<Boolean>) result).exception;
@@ -611,7 +621,6 @@ public class FirstFragment extends Fragment {
                         });
                     } else if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
                         Boolean deleted = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<Boolean>) result).data;
-                        Snackbar snackbar;
                         if (deleted) {
                             // update result view
                             activity.appKey.reconstruct((reconstructionDetailsResult) -> {
@@ -621,7 +630,11 @@ public class FirstFragment extends Fragment {
                                         renderError(((Result.Error<KeyReconstructionDetails>) reconstructionDetailsResult).exception);
                                     } else if (reconstructionDetailsResult instanceof Result.Success) {
                                         KeyDetails details = activity.appKey.getKeyDetails();
-                                        binding.deleteSeedPhrase.setEnabled(false);
+                                        requireActivity().runOnUiThread(() -> {
+                                            binding.deleteSeedPhrase.setEnabled(false);
+                                            binding.setSeedPhrase.setEnabled(true);
+                                            binding.changeSeedPhrase.setEnabled(false);
+                                        });
                                         renderTKeyDetails(((Result.Success<KeyReconstructionDetails>) reconstructionDetailsResult).data, details);
                                         hideLoading();
                                     }
@@ -632,11 +645,18 @@ public class FirstFragment extends Fragment {
                                 }
 
                             });
-                            snackbar = Snackbar.make(view1, "Phrase Deleted", Snackbar.LENGTH_LONG);
+                            requireActivity().runOnUiThread(() -> {
+                                Snackbar snackbar = Snackbar.make(view1, "Phrase Deleted", Snackbar.LENGTH_LONG);
+                                snackbar.show();
+                                hideLoading();
+                            });
                         } else {
-                            snackbar = Snackbar.make(view1, "Phrase failed ot be deleted", Snackbar.LENGTH_LONG);
+                            requireActivity().runOnUiThread(() -> {
+                                Snackbar snackbar = Snackbar.make(view1, "Phrase failed ot be deleted", Snackbar.LENGTH_LONG);
+                                snackbar.show();
+                                hideLoading();
+                            });
                         }
-                        snackbar.show();
                     }
                 });
             } catch (Exception e) {
@@ -721,16 +741,13 @@ public class FirstFragment extends Fragment {
         });
 
         binding.getKeyDetails.setOnClickListener(view1 -> {
-            showLoading();
             try {
                 KeyDetails keyDetails = activity.appKey.getKeyDetails();
                 String snackbarContent = "There are " + (keyDetails.getTotalShares()) + " available shares. " + (keyDetails.getRequiredShares()) + " are required to reconstruct the private key";
                 Snackbar snackbar = Snackbar.make(view1, snackbarContent, Snackbar.LENGTH_LONG);
                 snackbar.show();
-                hideLoading();
             } catch (RuntimeError e) {
                 renderError(e);
-                hideLoading();
             }
         });
     }
