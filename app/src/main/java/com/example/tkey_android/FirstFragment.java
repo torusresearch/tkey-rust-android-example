@@ -501,9 +501,11 @@ public class FirstFragment extends Fragment {
                                     hideLoading();
                                 } else if (reconstructionDetailsResult instanceof Result.Success) {
                                     KeyDetails details = activity.appKey.getKeyDetails();
-                                    binding.setSeedPhrase.setEnabled(false);
-                                    binding.changeSeedPhrase.setEnabled(true);
-                                    binding.deleteSeedPhrase.setEnabled(true);
+                                    requireActivity().runOnUiThread(() -> {
+                                        binding.setSeedPhrase.setEnabled(false);
+                                        binding.changeSeedPhrase.setEnabled(true);
+                                        binding.deleteSeedPhrase.setEnabled(true);
+                                    });
                                     renderTKeyDetails(((Result.Success<KeyReconstructionDetails>) reconstructionDetailsResult).data, details);
                                     hideLoading();
                                 }
