@@ -67,6 +67,8 @@ public class FirstFragment extends Fragment {
     private final String SHARE_ALIAS = "SHARE";
 
     private final String SHARE_INDEX_GENERATED_ALIAS = "SHARE_INDEX_GENERATED_ALIAS";
+    private final String ADD_PASSWORD_SET_ALIAS = "ADD_PASSWORD_SET_ALIAS";
+    private final String SEED_PHRASE_SET_ALIAS = "SEED_PHRASE_SET_ALIAS";
 
     @Override
     public View onCreateView(
@@ -372,6 +374,7 @@ public class FirstFragment extends Fragment {
                                 binding.changePassword.setEnabled(true);
                                 Snackbar snackbar = Snackbar.make(view1, "Added password " + setAnswer + " for share index" + share.getIndex(), Snackbar.LENGTH_LONG);
                                 snackbar.show();
+                                activity.sharedpreferences.edit().putString(ADD_PASSWORD_SET_ALIAS, "SET").apply();
                                 // update result view
                                 activity.appKey.reconstruct((reconstructionDetailsResult) -> {
                                     try {
@@ -471,6 +474,7 @@ public class FirstFragment extends Fragment {
         });
 
         binding.setSeedPhrase.setOnClickListener(view1 -> {
+            showLoading();
             String phrase = "seed sock milk update focus rotate barely fade car face mechanic mercy";
             SeedPhraseModule.setSeedPhrase(activity.appKey, "HD Key Tree", phrase, 0, result -> {
                 if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
@@ -478,18 +482,23 @@ public class FirstFragment extends Fragment {
                         Exception e = ((com.web3auth.tkey.ThresholdKey.Common.Result.Error<Boolean>) result).exception;
                         Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e.toString(), Snackbar.LENGTH_LONG);
                         snackbar.show();
+                        hideLoading();
                     });
                 } else if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
                     Boolean set = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<Boolean>) result).data;
-                    Snackbar snackbar;
                     if (set) {
-                        snackbar = Snackbar.make(view1, "Seed phrase set", Snackbar.LENGTH_LONG);
+                        requireActivity().runOnUiThread(() -> {
+                            Snackbar snackbar;
+                            snackbar = Snackbar.make(view1, "Seed phrase set", Snackbar.LENGTH_LONG);
+                            snackbar.show();
+                        });
+                        activity.sharedpreferences.edit().putString(SEED_PHRASE_SET_ALIAS, "SET").apply();
                         // update result view
                         activity.appKey.reconstruct((reconstructionDetailsResult) -> {
                             try {
                                 if (reconstructionDetailsResult instanceof Result.Error) {
-                                    hideLoading();
                                     renderError(((Result.Error<KeyReconstructionDetails>) reconstructionDetailsResult).exception);
+                                    hideLoading();
                                 } else if (reconstructionDetailsResult instanceof Result.Success) {
                                     KeyDetails details = activity.appKey.getKeyDetails();
                                     binding.setSeedPhrase.setEnabled(false);
@@ -506,14 +515,18 @@ public class FirstFragment extends Fragment {
 
                         });
                     } else {
-                        snackbar = Snackbar.make(view1, "Failed to set seed phrase", Snackbar.LENGTH_LONG);
+                        requireActivity().runOnUiThread(() -> {
+                            Snackbar snackbar;
+                            snackbar = Snackbar.make(view1, "Failed to set seed phrase", Snackbar.LENGTH_LONG);
+                            snackbar.show();
+                        });
                     }
-                    snackbar.show();
                 }
             });
         });
 
         binding.changeSeedPhrase.setOnClickListener(view1 -> {
+            showLoading();
             String oldPhrase = "seed sock milk update focus rotate barely fade car face mechanic mercy";
             String newPhrase = "object brass success calm lizard science syrup planet exercise parade honey impulse";
             SeedPhraseModule.changePhrase(activity.appKey, oldPhrase, newPhrase, result -> {
@@ -521,6 +534,7 @@ public class FirstFragment extends Fragment {
                     requireActivity().runOnUiThread(() -> {
                         Exception e = ((com.web3auth.tkey.ThresholdKey.Common.Result.Error<Boolean>) result).exception;
                         renderError(e);
+                        hideLoading();
                     });
                 } else if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
                     Boolean changed = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<Boolean>) result).data;
@@ -529,9 +543,11 @@ public class FirstFragment extends Fragment {
                         snackbar.show();
                         binding.changeSeedPhrase.setEnabled(false);
                         binding.deleteSeedPhrase.setEnabled(true);
+                        hideLoading();
                     } else {
                         Snackbar snackbar = Snackbar.make(view1, "Failed to change seed phrase", Snackbar.LENGTH_LONG);
                         snackbar.show();
+                        hideLoading();
                     }
                 }
             });
@@ -762,6 +778,7 @@ public class FirstFragment extends Fragment {
     }
 
     private void userHasCreatedTkey() {
+        MainActivity activity = (MainActivity) requireActivity();
         requireActivity().runOnUiThread(() -> {
             binding.googleLogin.setEnabled(false);
             binding.createThresholdKey.setEnabled(false);
@@ -771,10 +788,18 @@ public class FirstFragment extends Fragment {
             binding.deleteSeedPhrase.setEnabled(true);
             binding.resetAccount.setEnabled(true);
             binding.getKeyDetails.setEnabled(true);
-            binding.addPassword.setEnabled(true);
+            if(activity.sharedpreferences.getString(ADD_PASSWORD_SET_ALIAS, null).equals("SET")){
+                binding.addPassword.setEnabled(false);
+            } else {
+                binding.addPassword.setEnabled(true);
+            }
             binding.changePassword.setEnabled(true);
             binding.showPassword.setEnabled(true);
-            binding.setSeedPhrase.setEnabled(true);
+            if(activity.sharedpreferences.getString(SEED_PHRASE_SET_ALIAS, null).equals("SET")){
+                binding.setSeedPhrase.setEnabled(false);
+            } else {
+                binding.setSeedPhrase.setEnabled(true);
+            }
             binding.deleteSeedPhrase.setEnabled(true);
             binding.exportShare.setEnabled(true);
             binding.getPrivateKey.setEnabled(true);
