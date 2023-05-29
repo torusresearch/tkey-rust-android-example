@@ -634,6 +634,7 @@ public class FirstFragment extends Fragment {
                                             binding.deleteSeedPhrase.setEnabled(false);
                                             binding.setSeedPhrase.setEnabled(true);
                                             binding.changeSeedPhrase.setEnabled(false);
+                                            binding.getSeedPhrase.setEnabled(false);
                                         });
                                         renderTKeyDetails(((Result.Success<KeyReconstructionDetails>) reconstructionDetailsResult).data, details);
                                         hideLoading();
@@ -820,7 +821,11 @@ public class FirstFragment extends Fragment {
             binding.createThresholdKey.setEnabled(false);
             binding.reconstructThresholdKey.setEnabled(true);
             binding.generateNewShare.setEnabled(true);
-            binding.deleteShare.setEnabled(true);
+            if(activity.sharedpreferences.getString(SHARE_INDEX_GENERATED_ALIAS, null) != null ) {
+                binding.deleteShare.setEnabled(true);
+            } else {
+                binding.deleteShare.setEnabled(false);
+            }
             binding.deleteSeedPhrase.setEnabled(true);
             binding.resetAccount.setEnabled(true);
             binding.getKeyDetails.setEnabled(true);
