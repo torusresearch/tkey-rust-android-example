@@ -25,6 +25,7 @@ public class LoginVerifier {
         this.domain = domain;
     }
 
+    @SuppressWarnings("unused")
     public LoginVerifier(String name, LoginType typeOfLogin, String clientId, String verifier, String domain, String verifierIdField, boolean isVerfierIdCaseSensitive) {
         this(name, typeOfLogin, clientId, verifier, domain);
         this.verifierIdField = verifierIdField;

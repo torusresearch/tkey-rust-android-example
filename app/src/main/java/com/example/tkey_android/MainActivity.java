@@ -20,15 +20,8 @@ import com.web3auth.tkey.ThresholdKey.StorageLayer;
 import com.web3auth.tkey.ThresholdKey.ThresholdKey;
 import com.web3auth.tkey.Version;
 import com.web3auth.tkey.RuntimeError;
-
-import android.util.Base64;
 import android.view.Menu;
 import android.view.MenuItem;
-
-import java.io.IOException;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.cert.CertificateException;
 
 public class MainActivity extends AppCompatActivity {
     private AppBarConfiguration appBarConfiguration;
