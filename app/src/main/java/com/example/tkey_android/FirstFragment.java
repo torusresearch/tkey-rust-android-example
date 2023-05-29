@@ -307,8 +307,7 @@ public class FirstFragment extends Fragment {
             showLoading();
             String shareIndexCreated = activity.sharedpreferences.getString(SHARE_INDEX_GENERATED_ALIAS, null);
             if(shareIndexCreated != null) {
-                String index = shareIndexCreated;
-                activity.appKey.deleteShare(index, result -> {
+                activity.appKey.deleteShare(shareIndexCreated, result -> {
                     if (result instanceof Result.Error) {
                         requireActivity().runOnUiThread(() -> {
                             Exception e = ((Result.Error<Void>) result).exception;
@@ -319,7 +318,7 @@ public class FirstFragment extends Fragment {
                         requireActivity().runOnUiThread(() -> {
                             binding.resetAccount.setEnabled(true);
                             Snackbar snackbar;
-                            snackbar = Snackbar.make(view1, index + " deleted", Snackbar.LENGTH_LONG);
+                            snackbar = Snackbar.make(view1, shareIndexCreated + " deleted", Snackbar.LENGTH_LONG);
                             snackbar.show();
                         });
                         // update result view
@@ -821,26 +820,14 @@ public class FirstFragment extends Fragment {
             binding.createThresholdKey.setEnabled(false);
             binding.reconstructThresholdKey.setEnabled(true);
             binding.generateNewShare.setEnabled(true);
-            if(activity.sharedpreferences.getString(SHARE_INDEX_GENERATED_ALIAS, null) != null ) {
-                binding.deleteShare.setEnabled(true);
-            } else {
-                binding.deleteShare.setEnabled(false);
-            }
+            binding.deleteShare.setEnabled(activity.sharedpreferences.getString(SHARE_INDEX_GENERATED_ALIAS, null) != null);
             binding.deleteSeedPhrase.setEnabled(true);
             binding.resetAccount.setEnabled(true);
             binding.getKeyDetails.setEnabled(true);
-            if(activity.sharedpreferences.getString(ADD_PASSWORD_SET_ALIAS, "").equals("SET")){
-                binding.addPassword.setEnabled(false);
-            } else {
-                binding.addPassword.setEnabled(true);
-            }
+            binding.addPassword.setEnabled(!activity.sharedpreferences.getString(ADD_PASSWORD_SET_ALIAS, "").equals("SET"));
             binding.changePassword.setEnabled(true);
             binding.showPassword.setEnabled(true);
-            if(activity.sharedpreferences.getString(SEED_PHRASE_SET_ALIAS, "").equals("SET")){
-                binding.setSeedPhrase.setEnabled(false);
-            } else {
-                binding.setSeedPhrase.setEnabled(true);
-            }
+            binding.setSeedPhrase.setEnabled(!activity.sharedpreferences.getString(SEED_PHRASE_SET_ALIAS, "").equals("SET"));
             binding.deleteSeedPhrase.setEnabled(true);
             binding.exportShare.setEnabled(true);
             binding.getPrivateKey.setEnabled(true);
