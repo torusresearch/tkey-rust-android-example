@@ -189,7 +189,7 @@ public class FirstFragment extends Fragment {
                                                 ArrayList<String> indexes = activity.appKey.getShareIndexes();
                                                 indexes.removeAll(filters);
                                                 String index = indexes.get(0);
-                                                String shareToSave = activity.appKey.outputShare(index, null);
+                                                String shareToSave = activity.appKey.outputShare(index);
                                                 SharedPreferences.Editor editor = activity.sharedpreferences.edit();
                                                 editor.putString(SHARE_ALIAS, shareToSave);
                                                 editor.commit();
@@ -528,8 +528,8 @@ public class FirstFragment extends Fragment {
                     try {
                         GenerateShareStoreResult shareStoreResult = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<GenerateShareStoreResult>) result).data;
                         String index = shareStoreResult.getIndex();
-                        String share = activity.appKey.outputShare(index, null);
-                        String serialized = ShareSerializationModule.serializeShare(activity.appKey, share, null);
+                        String share = activity.appKey.outputShare(index);
+                        String serialized = ShareSerializationModule.serializeShare(activity.appKey, share);
                         Snackbar snackbar = Snackbar.make(view1, "Serialization result: " + serialized, Snackbar.LENGTH_LONG);
                         snackbar.show();
                     } catch (RuntimeError e) {
