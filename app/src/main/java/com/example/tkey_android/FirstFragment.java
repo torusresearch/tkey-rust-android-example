@@ -645,10 +645,12 @@ public class FirstFragment extends Fragment {
         });
 
         binding.exportShare.setOnClickListener(view1 -> activity.appKey.generateNewShare(result -> {
+            showLoading();
             if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
                 requireActivity().runOnUiThread(() -> {
                     Exception e = ((com.web3auth.tkey.ThresholdKey.Common.Result.Error<GenerateShareStoreResult>) result).exception;
                     renderError(e);
+                    hideLoading();
                 });
             } else if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
                 requireActivity().runOnUiThread(() -> {
@@ -659,14 +661,17 @@ public class FirstFragment extends Fragment {
                         String serialized = ShareSerializationModule.serializeShare(activity.appKey, share, null);
                         Snackbar snackbar = Snackbar.make(view1, "Serialization result: " + serialized, Snackbar.LENGTH_LONG);
                         snackbar.show();
+                        hideLoading();
                     } catch (RuntimeError e) {
                         renderError(e);
+                        hideLoading();
                     }
                 });
             }
         }));
 
         binding.setPrivateKey.setOnClickListener(view1 -> {
+            showLoading();
             try {
                 PrivateKey newKey = PrivateKey.generate();
                 PrivateKeysModule.setPrivateKey(activity.appKey, newKey.hex, "secp256k1n", result -> {
@@ -674,46 +679,58 @@ public class FirstFragment extends Fragment {
                         requireActivity().runOnUiThread(() -> {
                             Exception e = ((com.web3auth.tkey.ThresholdKey.Common.Result.Error<Boolean>) result).exception;
                             renderError(e);
+                            hideLoading();
                         });
                     } else if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
                         Boolean set = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<Boolean>) result).data;
                         Snackbar snackbar = Snackbar.make(view1, "Set private key result: " + set, Snackbar.LENGTH_LONG);
                         snackbar.show();
+                        hideLoading();
                     }
                 });
             } catch (RuntimeError e) {
                 renderError(e);
+                hideLoading();
             }
         });
 
         binding.getPrivateKey.setOnClickListener(view1 -> {
+            showLoading();
             try {
                 String key = PrivateKeysModule.getPrivateKeys(activity.appKey);
                 Snackbar snackbar = Snackbar.make(view1, key, Snackbar.LENGTH_LONG);
                 snackbar.show();
+                hideLoading();
             } catch (RuntimeError e) {
                 renderError(e);
+                hideLoading();
             }
         });
 
         binding.getAccounts.setOnClickListener(view1 -> {
+            showLoading();
             try {
                 ArrayList<String> accounts = PrivateKeysModule.getPrivateKeyAccounts(activity.appKey);
                 Snackbar snackbar = Snackbar.make(view1, accounts.toString(), Snackbar.LENGTH_LONG);
                 snackbar.show();
+                hideLoading();
             } catch (RuntimeError | JSONException e) {
                 renderError(e);
+                hideLoading();
             }
         });
 
         binding.getKeyDetails.setOnClickListener(view1 -> {
+            showLoading();
             try {
                 KeyDetails keyDetails = activity.appKey.getKeyDetails();
                 String snackbarContent = "There are " + (keyDetails.getTotalShares()) + " available shares. " + (keyDetails.getRequiredShares()) + " are required to reconstruct the private key";
                 Snackbar snackbar = Snackbar.make(view1, snackbarContent, Snackbar.LENGTH_LONG);
                 snackbar.show();
+                hideLoading();
             } catch (RuntimeError e) {
                 renderError(e);
+                hideLoading();
             }
         });
     }
@@ -790,14 +807,14 @@ public class FirstFragment extends Fragment {
             binding.deleteSeedPhrase.setEnabled(true);
             binding.resetAccount.setEnabled(true);
             binding.getKeyDetails.setEnabled(true);
-            if(activity.sharedpreferences.getString(ADD_PASSWORD_SET_ALIAS, null).equals("SET")){
+            if(activity.sharedpreferences.getString(ADD_PASSWORD_SET_ALIAS, "").equals("SET")){
                 binding.addPassword.setEnabled(false);
             } else {
                 binding.addPassword.setEnabled(true);
             }
             binding.changePassword.setEnabled(true);
             binding.showPassword.setEnabled(true);
-            if(activity.sharedpreferences.getString(SEED_PHRASE_SET_ALIAS, null).equals("SET")){
+            if(activity.sharedpreferences.getString(SEED_PHRASE_SET_ALIAS, "").equals("SET")){
                 binding.setSeedPhrase.setEnabled(false);
             } else {
                 binding.setSeedPhrase.setEnabled(true);
