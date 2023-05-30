@@ -46,5 +46,4 @@ Contributions to this project are welcome. If you have any suggestions, bug fixe
 This project is licensed under the MIT License. You are free to modify and distribute the codebase following the terms of the license.
 
 ### Resources
-Tkey Rust GitHub Repository: https://github.com/torusresearch/tkey-rust
-Tkey Rust Documentation: https://docs.tor.us/tkey-rust/
+Tkey Rust GitHub Repository: https://github.com/torusresearch/tkey-rust (Private)
