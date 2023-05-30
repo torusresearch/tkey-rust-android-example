@@ -1,6 +1,6 @@
 # tKey Android Example
 
-This project is an example Android application demonstrating the usage of the tKey library in an Android environment. tKey is a library that provides threshold  key management for decentralized applications (dApps) built on the Torus network.
+This project is an example Android application demonstrating the usage of the tKey library in an Android environment. tKey is a library that provides threshold  key management for decentralized applications (dApps) built on Web3Auth.
 
 ## Getting Started
 
