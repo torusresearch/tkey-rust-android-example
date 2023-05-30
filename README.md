@@ -33,11 +33,6 @@ The application will be installed and launched on your device or emulator. You c
 ### Customization
 The example project provides a basic implementation of using the tKey library.
 
-Modify the UI: Update the user interface to match your application's design and requirements.
-
-Implement additional functionality: Extend the example project to include more features and interactions with the Tkey Rust library.
-
-Integrate with other libraries or APIs: If your application requires integration with other libraries or APIs, you can incorporate them into this project.
 
 ### Contributing
 Contributions to this project are welcome. If you have any suggestions, bug fixes, or improvements, please open an issue or submit a pull request.
