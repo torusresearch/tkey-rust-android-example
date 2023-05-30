@@ -31,7 +31,7 @@ In Android Studio, click on the "Run" button or use the shortcut Shift + F10 to 
 The application will be installed and launched on your device or emulator. You can now explore the functionality of the tKey library in the app.
 
 ### Customization
-The example project provides a basic implementation of using the Tkey Rust library. You can customize and extend it according to your needs. Here are a few suggestions:
+The example project provides a basic implementation of using the tKey library.
 
 Modify the UI: Update the user interface to match your application's design and requirements.
 
