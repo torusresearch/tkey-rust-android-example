@@ -264,7 +264,7 @@ public class FirstFragment extends Fragment {
 
                 // 1. Fetch locally available share
                 String share = activity.sharedpreferences.getString(SHARE_ALIAS, null);
-                activity.tKey.initialize(activity.postboxKey, null, false, false, result -> {
+                activity.tKey.initialize(null, null, false, false, result -> {
                     if (result instanceof Result.Error) {
                         Exception e = ((Result.Error<KeyDetails>) result).exception;
                         renderError(e);
