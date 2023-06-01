@@ -198,7 +198,7 @@ public class FirstFragment extends Fragment {
                         } else if(approveResult instanceof  Result.Success) {
                             Boolean success = ((Result.Success<Boolean>) approveResult).data;
                             requireActivity().runOnUiThread(() -> {
-                                binding.resultView.setText("Success status: " + success);
+                                binding.resultView.setText("Approved: " + success);
                             });
                         }
                     });
