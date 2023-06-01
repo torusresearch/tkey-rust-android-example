@@ -69,12 +69,14 @@ public class FirstFragment extends Fragment {
 
     //    To be used for saving/reading data from shared prefs
     private final String SHARE_ALIAS = "SHARE";
-
+    private final String SHARE_INDEX_ALIAS = "SHARE_INDEX";
     private final String SHARE_INDEX_GENERATED_ALIAS = "SHARE_INDEX_GENERATED_ALIAS";
     private final String ADD_PASSWORD_SET_ALIAS = "ADD_PASSWORD_SET_ALIAS";
 
     private final String SEED_PHRASE_SET_ALIAS = "SEED_PHRASE_SET_ALIAS";
     private final String SEED_PHRASE_ALIAS = "SEED_PHRASE_ALIAS";
+
+    private final String REQUEST_ID_ALIAS = "REQUEST_ID_ALIAS";
 
     @Override
     public View onCreateView(
@@ -174,7 +176,7 @@ public class FirstFragment extends Fragment {
                             String requestId = ((Result.Success<String>) result).data;
                             requireActivity().runOnUiThread(() -> {
                                 binding.resultView.setText("Request Id: " + requestId);
-                                activity.sharedpreferences.edit().putString("REQUEST_ID_ALIAS", requestId).apply();
+                                activity.sharedpreferences.edit().putString(REQUEST_ID_ALIAS, requestId).apply();
                             });
                         }
                     });
@@ -195,14 +197,9 @@ public class FirstFragment extends Fragment {
                         ArrayList<String> requests = ((Result.Success<ArrayList<String>>) result).data;
                         String requestId = requests.get(0);
 
-                        List<String> filters = new ArrayList<>();
-                        filters.add("1");
-                        ArrayList<String> indexes = activity.appKey.getShareIndexes();
-                        indexes.removeAll(filters);
-                        String index = indexes.get(0);
+                        String shareIndex = activity.sharedpreferences.getString(SHARE_INDEX_ALIAS, null);
 
-
-                        SharetransferModule.approveRequestWithShareIndex(activity.appKey, requestId, index, (approveResult) -> {
+                        SharetransferModule.approveRequestWithShareIndex(activity.appKey, requestId, shareIndex, (approveResult) -> {
                             if(approveResult instanceof Result.Error) {
                                 renderError(((Result.Error<Boolean>) approveResult).exception);
                             } else if(approveResult instanceof  Result.Success) {
@@ -223,7 +220,7 @@ public class FirstFragment extends Fragment {
         });
 
         binding.requestStatusCheck.setOnClickListener(view1 -> {
-            String encKey = activity.sharedpreferences.getString("REQUEST_ID_ALIAS", null); // SharetransferModule.getCurrentEncryptionKey(activity.appKey);
+            String encKey = activity.sharedpreferences.getString(REQUEST_ID_ALIAS, null); // SharetransferModule.getCurrentEncryptionKey(activity.appKey);
             SharetransferModule.requestStatusCheck(activity.appKey, encKey, true, (result) -> {
                 if(result instanceof Result.Error) {
                     renderError(((Result.Error<ShareStore>) result).exception);
@@ -285,6 +282,7 @@ public class FirstFragment extends Fragment {
                                             String shareToSave = activity.appKey.outputShare(index, null);
                                             SharedPreferences.Editor editor = activity.sharedpreferences.edit();
                                             editor.putString(SHARE_ALIAS, shareToSave);
+                                            editor.putString(SHARE_INDEX_ALIAS, index);
                                             editor.apply();
                                             hideLoading();
 
