@@ -175,7 +175,8 @@ public class FirstFragment extends Fragment {
                         } else if(result instanceof  Result.Success) {
                             String requestId = ((Result.Success<String>) result).data;
                             requireActivity().runOnUiThread(() -> {
-                                binding.resultView.setText("Request Id: " + requestId);
+                                Snackbar snackbar = Snackbar.make(view1, "Request Id: " + requestId, Snackbar.LENGTH_LONG);
+                                snackbar.show();
                                 activity.sharedpreferences.edit().putString(REQUEST_ID_ALIAS, requestId).apply();
                             });
                         }
@@ -204,7 +205,8 @@ public class FirstFragment extends Fragment {
                         } else if(approveResult instanceof  Result.Success) {
                             Boolean success = ((Result.Success<Boolean>) approveResult).data;
                             requireActivity().runOnUiThread(() -> {
-                                binding.resultView.setText("Approved: " + success);
+                                Snackbar snackbar = Snackbar.make(view1, "Approved: " + success, Snackbar.LENGTH_LONG);
+                                snackbar.show();
                             });
                         }
                     });
@@ -219,9 +221,9 @@ public class FirstFragment extends Fragment {
                 if(result instanceof Result.Error) {
                     renderError(((Result.Error<ShareStore>) result).exception);
                 } else if(result instanceof Result.Success) {
-
                     requireActivity().runOnUiThread(() -> {
-                        binding.resultView.setText("Request Status: " + ((Result.Success<ShareStore>) result).data);
+                        Snackbar snackbar = Snackbar.make(view1, "Request Status: " + ((Result.Success<ShareStore>) result).data, Snackbar.LENGTH_LONG);
+                        snackbar.show();
                     });
                 }
             });
