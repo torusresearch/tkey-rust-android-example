@@ -193,27 +193,21 @@ public class FirstFragment extends Fragment {
                 if(result instanceof Result.Error) {
                     renderError(((Result.Error<ArrayList<String>>) result).exception);
                 } else if(result instanceof  Result.Success) {
-                    try {
-                        ArrayList<String> requests = ((Result.Success<ArrayList<String>>) result).data;
-                        String requestId = requests.get(0);
+                    ArrayList<String> requests = ((Result.Success<ArrayList<String>>) result).data;
+                    String requestId = requests.get(0);
 
-                        String shareIndex = activity.sharedpreferences.getString(SHARE_INDEX_ALIAS, null);
+                    String shareIndex = activity.sharedpreferences.getString(SHARE_INDEX_ALIAS, null);
 
-                        SharetransferModule.approveRequestWithShareIndex(activity.appKey, requestId, shareIndex, (approveResult) -> {
-                            if(approveResult instanceof Result.Error) {
-                                renderError(((Result.Error<Boolean>) approveResult).exception);
-                            } else if(approveResult instanceof  Result.Success) {
-                                Boolean success = ((Result.Success<Boolean>) approveResult).data;
-                                requireActivity().runOnUiThread(() -> {
-                                    binding.resultView.setText("Approved: " + success);
-                                });
-                            }
-                        });
-                    } catch (JSONException e) {
-                        throw new RuntimeException(e);
-                    } catch (RuntimeError e) {
-                        throw new RuntimeException(e);
-                    }
+                    SharetransferModule.approveRequestWithShareIndex(activity.appKey, requestId, shareIndex, (approveResult) -> {
+                        if(approveResult instanceof Result.Error) {
+                            renderError(((Result.Error<Boolean>) approveResult).exception);
+                        } else if(approveResult instanceof  Result.Success) {
+                            Boolean success = ((Result.Success<Boolean>) approveResult).data;
+                            requireActivity().runOnUiThread(() -> {
+                                binding.resultView.setText("Approved: " + success);
+                            });
+                        }
+                    });
 
                 }
             });
