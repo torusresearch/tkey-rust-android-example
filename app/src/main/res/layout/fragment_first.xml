@@ -184,6 +184,12 @@
                     android:text="Look For Requests" />
 
 
+                <Button
+                    android:id="@+id/cleanupRequests"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Cleanup Requests" />
+
                 <View
                     android:id="@+id/divider5"
                     android:layout_width="match_parent"

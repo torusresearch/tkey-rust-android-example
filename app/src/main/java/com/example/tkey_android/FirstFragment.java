@@ -236,6 +236,18 @@ public class FirstFragment extends Fragment {
             });
         });
 
+        binding.cleanupRequests.setOnClickListener(view1 -> {
+            try {
+                SharetransferModule.cleanupRequest(activity.appKey);
+                requireActivity().runOnUiThread(() -> {
+                    Snackbar snackbar = Snackbar.make(view1, "Successfully cleaned up the requests", Snackbar.LENGTH_LONG);
+                    snackbar.show();
+                });
+            } catch (RuntimeError e) {
+                renderError(e);
+            }
+        });
+
 
 
         binding.createThresholdKey.setOnClickListener(view1 -> {
