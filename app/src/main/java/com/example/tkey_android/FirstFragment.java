@@ -4,9 +4,11 @@ import android.app.AlertDialog;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.InputType;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.webkit.WebView;
 import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -42,6 +44,7 @@ import org.torusresearch.customauth.types.TorusLoginResponse;
 import org.torusresearch.customauth.types.UserCancelledException;
 import org.torusresearch.customauth.utils.Helpers;
 import org.torusresearch.fetchnodedetails.types.TorusNetwork;
+import com.web3auth.tkey.ThresholdKey.Modules.SharetransferModule;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -158,6 +161,51 @@ public class FirstFragment extends Fragment {
                 throw new RuntimeException(e);
             }
         });
+
+        binding.requestNewShare.setOnClickListener(view1 -> {
+            requireActivity().runOnUiThread(() -> {
+                String userAgent = new WebView(getContext()).getSettings().getUserAgentString();
+                try {
+                    SharetransferModule.requestNewShare(activity.appKey, userAgent, activity.appKey.getShareIndexes().get(0), (result) -> {
+                        if(result instanceof Result.Error) {
+                            renderError(((Result.Error<String>) result).exception);
+                        } else if(result instanceof  Result.Success) {
+                            String requestId = ((Result.Success<String>) result).data;
+                            requireActivity().runOnUiThread(() -> {
+                                binding.resultView.setText("Request Id: " + requestId);
+                            });
+                        }
+                    });
+                } catch (JSONException e) {
+                    throw new RuntimeException(e);
+                } catch (RuntimeError e) {
+                    throw new RuntimeException(e);
+                }
+            });
+        });
+
+        binding.lookForRequests.setOnClickListener(view1 -> {
+            SharetransferModule.lookForRequest(activity.appKey, (result) -> {
+                if(result instanceof Result.Error) {
+                    renderError(((Result.Error<ArrayList<String>>) result).exception);
+                } else if(result instanceof  Result.Success) {
+                    ArrayList<String> requests = ((Result.Success<ArrayList<String>>) result).data;
+                    String shareToShare = activity.sharedpreferences.getString(SHARE_ALIAS, null);
+                    String requestId = requests.get(0);
+                    SharetransferModule.approveRequestWithShareIndex(activity.appKey, requestId, shareToShare, (approveResult) -> {
+                        if(approveResult instanceof Result.Error) {
+                            renderError(((Result.Error<Boolean>) approveResult).exception);
+                        } else if(approveResult instanceof  Result.Success) {
+                            Boolean success = ((Result.Success<Boolean>) approveResult).data;
+                            requireActivity().runOnUiThread(() -> {
+                                binding.resultView.setText("Success status: " + success);
+                            });
+                        }
+                    });
+                }
+            });
+        });
+
         binding.createThresholdKey.setOnClickListener(view1 -> {
             showLoading();
             try {
@@ -176,10 +224,10 @@ public class FirstFragment extends Fragment {
                         if (share == null) {
                             // 2. If no shares, then assume new user and try initialize and reconstruct. If success, save share, if fail prompt to reset account
                             activity.appKey.reconstruct(reconstruct_result -> {
-                                if (reconstruct_result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
+                                if (reconstruct_result instanceof Result.Error) {
                                     renderError(((Result.Error<KeyReconstructionDetails>) reconstruct_result).exception);
-                                } else if (reconstruct_result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
-                                    KeyReconstructionDetails reconstructionDetails = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<KeyReconstructionDetails>) reconstruct_result).data;
+                                } else if (reconstruct_result instanceof Result.Success) {
+                                    KeyReconstructionDetails reconstructionDetails = ((Result.Success<KeyReconstructionDetails>) reconstruct_result).data;
                                     requireActivity().runOnUiThread(() -> {
                                         try {
                                             renderTKeyDetails(reconstructionDetails, details);
@@ -213,7 +261,7 @@ public class FirstFragment extends Fragment {
                                         if (reconstruct_result_after_import instanceof Result.Error) {
                                             renderError(((Result.Error<KeyReconstructionDetails>) reconstruct_result_after_import).exception);
                                         } else if (reconstruct_result_after_import instanceof Result.Success) {
-                                            KeyReconstructionDetails reconstructionDetails = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<KeyReconstructionDetails>) reconstruct_result_after_import).data;
+                                            KeyReconstructionDetails reconstructionDetails = ((Result.Success<KeyReconstructionDetails>) reconstruct_result_after_import).data;
                                             requireActivity().runOnUiThread(() -> {
                                                 renderTKeyDetails(reconstructionDetails, details);
                                                 userHasCreatedTkey();
@@ -256,17 +304,17 @@ public class FirstFragment extends Fragment {
             showLoading();
             try {
                 activity.appKey.generateNewShare(result -> {
-                    if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
+                    if (result instanceof Result.Error) {
                         requireActivity().runOnUiThread(() -> {
-                            Exception e = ((com.web3auth.tkey.ThresholdKey.Common.Result.Error<GenerateShareStoreResult>) result).exception;
+                            Exception e = ((Result.Error<GenerateShareStoreResult>) result).exception;
                             Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e.toString(), Snackbar.LENGTH_LONG);
                             snackbar.show();
                             hideLoading();
                         });
-                    } else if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
+                    } else if (result instanceof Result.Success) {
                         requireActivity().runOnUiThread(() -> {
                             try {
-                                GenerateShareStoreResult share = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<GenerateShareStoreResult>) result).data;
+                                GenerateShareStoreResult share = ((Result.Success<GenerateShareStoreResult>) result).data;
                                 String shareIndexCreated = share.getIndex();
                                 activity.sharedpreferences.edit().putString(SHARE_INDEX_GENERATED_ALIAS, shareIndexCreated).apply();
                                 binding.deleteShare.setEnabled(true);
@@ -359,17 +407,17 @@ public class FirstFragment extends Fragment {
                 String question = "what's your password?";
                 String answer = generateRandomPassword(12);
                 SecurityQuestionModule.generateNewShare(activity.appKey, question, answer, result -> {
-                    if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
+                    if (result instanceof Result.Error) {
                         requireActivity().runOnUiThread(() -> {
-                            Exception e = ((com.web3auth.tkey.ThresholdKey.Common.Result.Error<GenerateShareStoreResult>) result).exception;
+                            Exception e = ((Result.Error<GenerateShareStoreResult>) result).exception;
                             Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e.toString(), Snackbar.LENGTH_LONG);
                             snackbar.show();
                             hideLoading();
                         });
-                    } else if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
+                    } else if (result instanceof Result.Success) {
                         requireActivity().runOnUiThread(() -> {
                             try {
-                                GenerateShareStoreResult share = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<GenerateShareStoreResult>) result).data;
+                                GenerateShareStoreResult share = ((Result.Success<GenerateShareStoreResult>) result).data;
                                 String setAnswer = SecurityQuestionModule.getAnswer(activity.appKey);
                                 binding.addPassword.setEnabled(false);
                                 binding.changePassword.setEnabled(true);
@@ -478,15 +526,15 @@ public class FirstFragment extends Fragment {
             showLoading();
             String phrase = "seed sock milk update focus rotate barely fade car face mechanic mercy";
             SeedPhraseModule.setSeedPhrase(activity.appKey, "HD Key Tree", phrase, 0, result -> {
-                if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
+                if (result instanceof Result.Error) {
                     requireActivity().runOnUiThread(() -> {
-                        Exception e = ((com.web3auth.tkey.ThresholdKey.Common.Result.Error<Boolean>) result).exception;
+                        Exception e = ((Result.Error<Boolean>) result).exception;
                         Snackbar snackbar = Snackbar.make(view1, "A problem occurred: " + e.toString(), Snackbar.LENGTH_LONG);
                         snackbar.show();
                         hideLoading();
                     });
-                } else if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
-                    Boolean set = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<Boolean>) result).data;
+                } else if (result instanceof Result.Success) {
+                    Boolean set = ((Result.Success<Boolean>) result).data;
                     if (set) {
                         activity.sharedpreferences.edit().putString(SEED_PHRASE_ALIAS, phrase).apply();
                         requireActivity().runOnUiThread(() -> {
@@ -534,14 +582,14 @@ public class FirstFragment extends Fragment {
             String oldPhrase = "seed sock milk update focus rotate barely fade car face mechanic mercy";
             String newPhrase = "object brass success calm lizard science syrup planet exercise parade honey impulse";
             SeedPhraseModule.changePhrase(activity.appKey, oldPhrase, newPhrase, result -> {
-                if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
+                if (result instanceof Result.Error) {
                     requireActivity().runOnUiThread(() -> {
-                        Exception e = ((com.web3auth.tkey.ThresholdKey.Common.Result.Error<Boolean>) result).exception;
+                        Exception e = ((Result.Error<Boolean>) result).exception;
                         renderError(e);
                         hideLoading();
                     });
-                } else if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
-                    Boolean changed = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<Boolean>) result).data;
+                } else if (result instanceof Result.Success) {
+                    Boolean changed = ((Result.Success<Boolean>) result).data;
                     if (changed) {
                         activity.sharedpreferences.edit().putString(SEED_PHRASE_ALIAS, newPhrase).apply();
                         requireActivity().runOnUiThread(() -> {
@@ -582,12 +630,12 @@ public class FirstFragment extends Fragment {
                 activity.sharedpreferences.edit().clear().apply();
 
                 temp_key.storage_layer_set_metadata(activity.postboxKey, "{ \"message\": \"KEY_NOT_FOUND\" }", result -> {
-                    if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
+                    if (result instanceof Result.Error) {
                         activity.runOnUiThread(() -> {
-                            Exception e = ((com.web3auth.tkey.ThresholdKey.Common.Result.Error<Void>) result).exception;
+                            Exception e = ((Result.Error<Void>) result).exception;
                             renderError(e);
                         });
-                    } else if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
+                    } else if (result instanceof Result.Success) {
                         activity.runOnUiThread(() -> {
                             activity.resetState();
                             userHasNotLoggedInWithGoogle();
@@ -613,13 +661,13 @@ public class FirstFragment extends Fragment {
                 String newPhrase = "object brass success calm lizard science syrup planet exercise parade honey impulse";
                 String phrase = activity.sharedpreferences.getString(SEED_PHRASE_ALIAS, newPhrase);
                 SeedPhraseModule.deletePhrase(activity.appKey, phrase, result -> {
-                    if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
+                    if (result instanceof Result.Error) {
                         requireActivity().runOnUiThread(() -> {
-                            Exception e = ((com.web3auth.tkey.ThresholdKey.Common.Result.Error<Boolean>) result).exception;
+                            Exception e = ((Result.Error<Boolean>) result).exception;
                             renderError(e);
                         });
-                    } else if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
-                        Boolean deleted = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<Boolean>) result).data;
+                    } else if (result instanceof Result.Success) {
+                        Boolean deleted = ((Result.Success<Boolean>) result).data;
                         if (deleted) {
                             // update result view
                             activity.appKey.reconstruct((reconstructionDetailsResult) -> {
@@ -666,16 +714,16 @@ public class FirstFragment extends Fragment {
 
         binding.exportShare.setOnClickListener(view1 -> activity.appKey.generateNewShare(result -> {
             showLoading();
-            if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
+            if (result instanceof Result.Error) {
                 requireActivity().runOnUiThread(() -> {
-                    Exception e = ((com.web3auth.tkey.ThresholdKey.Common.Result.Error<GenerateShareStoreResult>) result).exception;
+                    Exception e = ((Result.Error<GenerateShareStoreResult>) result).exception;
                     renderError(e);
                     hideLoading();
                 });
-            } else if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
+            } else if (result instanceof Result.Success) {
                 requireActivity().runOnUiThread(() -> {
                     try {
-                        GenerateShareStoreResult shareStoreResult = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<GenerateShareStoreResult>) result).data;
+                        GenerateShareStoreResult shareStoreResult = ((Result.Success<GenerateShareStoreResult>) result).data;
                         String index = shareStoreResult.getIndex();
                         String share = activity.appKey.outputShare(index, null);
                         String serialized = ShareSerializationModule.serializeShare(activity.appKey, share, null);
@@ -695,14 +743,14 @@ public class FirstFragment extends Fragment {
             try {
                 PrivateKey newKey = PrivateKey.generate();
                 PrivateKeysModule.setPrivateKey(activity.appKey, newKey.hex, "secp256k1n", result -> {
-                    if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Error) {
+                    if (result instanceof Result.Error) {
                         requireActivity().runOnUiThread(() -> {
-                            Exception e = ((com.web3auth.tkey.ThresholdKey.Common.Result.Error<Boolean>) result).exception;
+                            Exception e = ((Result.Error<Boolean>) result).exception;
                             renderError(e);
                             hideLoading();
                         });
-                    } else if (result instanceof com.web3auth.tkey.ThresholdKey.Common.Result.Success) {
-                        Boolean set = ((com.web3auth.tkey.ThresholdKey.Common.Result.Success<Boolean>) result).data;
+                    } else if (result instanceof Result.Success) {
+                        Boolean set = ((Result.Success<Boolean>) result).data;
                         Snackbar snackbar = Snackbar.make(view1, "Set private key result: " + set, Snackbar.LENGTH_LONG);
                         snackbar.show();
                         hideLoading();
