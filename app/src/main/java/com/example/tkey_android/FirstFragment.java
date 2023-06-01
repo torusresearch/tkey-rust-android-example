@@ -203,8 +203,9 @@ public class FirstFragment extends Fragment {
                                         renderError(((Result.Error<Boolean>) approveResult).exception);
                                     } else if(approveResult instanceof  Result.Success) {
                                         Boolean success = ((Result.Success<Boolean>) approveResult).data;
+                                        String msg = success ? "Approved: " + encPubKey : "FAILED to approve";
                                         requireActivity().runOnUiThread(() -> {
-                                            Snackbar snackbar = Snackbar.make(view1, "Approved: " + success, Snackbar.LENGTH_LONG);
+                                            Snackbar snackbar = Snackbar.make(view1, msg , Snackbar.LENGTH_LONG);
                                             snackbar.show();
                                         });
                                     }
@@ -230,7 +231,6 @@ public class FirstFragment extends Fragment {
                             ShareStore store = ((Result.Success<ShareStore>) result).data;
                             Snackbar snackbar = Snackbar.make(view1, "Request Status: " + store.share(), Snackbar.LENGTH_LONG);
                             snackbar.show();
-
                         }
                         catch (RuntimeError e) {
                             throw new RuntimeException(e);
@@ -924,8 +924,8 @@ public class FirstFragment extends Fragment {
             binding.resetAccount.setEnabled(true);
             binding.getKeyDetails.setEnabled(true);
             binding.addPassword.setEnabled(!activity.sharedpreferences.getString(ADD_PASSWORD_SET_ALIAS, "").equals("SET"));
-            binding.changePassword.setEnabled(true);
-            binding.showPassword.setEnabled(true);
+            binding.changePassword.setEnabled(false);
+            binding.showPassword.setEnabled(false);
             binding.setSeedPhrase.setEnabled(!activity.sharedpreferences.getString(SEED_PHRASE_SET_ALIAS, "").equals("SET"));
             binding.deleteSeedPhrase.setEnabled(true);
             binding.exportShare.setEnabled(true);
