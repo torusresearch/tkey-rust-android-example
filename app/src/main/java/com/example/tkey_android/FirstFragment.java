@@ -168,24 +168,18 @@ public class FirstFragment extends Fragment {
         binding.requestNewShare.setOnClickListener(view1 -> {
             requireActivity().runOnUiThread(() -> {
                 String userAgent = new WebView(getContext()).getSettings().getUserAgentString();
-                try {
-                    SharetransferModule.requestNewShare(activity.appKey, userAgent, activity.appKey.getShareIndexes().get(0), (result) -> {
-                        if(result instanceof Result.Error) {
-                            renderError(((Result.Error<String>) result).exception);
-                        } else if(result instanceof  Result.Success) {
-                            String requestId = ((Result.Success<String>) result).data;
-                            requireActivity().runOnUiThread(() -> {
-                                Snackbar snackbar = Snackbar.make(view1, "Request Id: " + requestId, Snackbar.LENGTH_LONG);
-                                snackbar.show();
-                                activity.sharedpreferences.edit().putString(REQUEST_ID_ALIAS, requestId).apply();
-                            });
-                        }
-                    });
-                } catch (JSONException e) {
-                    throw new RuntimeException(e);
-                } catch (RuntimeError e) {
-                    throw new RuntimeException(e);
-                }
+                SharetransferModule.requestNewShare(activity.appKey, userAgent, "[]", (result) -> {
+                    if(result instanceof Result.Error) {
+                        renderError(((Result.Error<String>) result).exception);
+                    } else if(result instanceof  Result.Success) {
+                        String requestId = ((Result.Success<String>) result).data;
+                        requireActivity().runOnUiThread(() -> {
+                            Snackbar snackbar = Snackbar.make(view1, "Request Id: " + requestId, Snackbar.LENGTH_LONG);
+                            snackbar.show();
+                            activity.sharedpreferences.edit().putString(REQUEST_ID_ALIAS, requestId).apply();
+                        });
+                    }
+                });
             });
         });
 
@@ -195,35 +189,53 @@ public class FirstFragment extends Fragment {
                     renderError(((Result.Error<ArrayList<String>>) result).exception);
                 } else if(result instanceof  Result.Success) {
                     ArrayList<String> requests = ((Result.Success<ArrayList<String>>) result).data;
-                    String requestId = requests.get(0);
+                    String encPubKey = requests.get(0);
 
-                    String shareIndex = activity.sharedpreferences.getString(SHARE_INDEX_ALIAS, null);
-
-                    SharetransferModule.approveRequestWithShareIndex(activity.appKey, requestId, shareIndex, (approveResult) -> {
-                        if(approveResult instanceof Result.Error) {
-                            renderError(((Result.Error<Boolean>) approveResult).exception);
-                        } else if(approveResult instanceof  Result.Success) {
-                            Boolean success = ((Result.Success<Boolean>) approveResult).data;
-                            requireActivity().runOnUiThread(() -> {
-                                Snackbar snackbar = Snackbar.make(view1, "Approved: " + success, Snackbar.LENGTH_LONG);
-                                snackbar.show();
-                            });
+                    activity.appKey.generateNewShare((generateNewShareResult) -> {
+                        if(generateNewShareResult instanceof  Result.Error) {
+                            renderError(((Result.Error<GenerateShareStoreResult>) generateNewShareResult).exception);
+                        } else if(generateNewShareResult instanceof Result.Success) {
+                            try {
+                                GenerateShareStoreResult generateShareStoreResult = ((Result.Success<GenerateShareStoreResult>) generateNewShareResult).data;
+                                String shareIndex = generateShareStoreResult.getIndex();
+                                SharetransferModule.approveRequestWithShareIndex(activity.appKey, encPubKey, shareIndex, (approveResult) -> {
+                                    if(approveResult instanceof Result.Error) {
+                                        renderError(((Result.Error<Boolean>) approveResult).exception);
+                                    } else if(approveResult instanceof  Result.Success) {
+                                        Boolean success = ((Result.Success<Boolean>) approveResult).data;
+                                        requireActivity().runOnUiThread(() -> {
+                                            Snackbar snackbar = Snackbar.make(view1, "Approved: " + success, Snackbar.LENGTH_LONG);
+                                            snackbar.show();
+                                        });
+                                    }
+                                });
+                            } catch (RuntimeError e) {
+                                renderError(e);
+                            }
                         }
                     });
-
                 }
             });
         });
 
         binding.requestStatusCheck.setOnClickListener(view1 -> {
+
             String encKey = activity.sharedpreferences.getString(REQUEST_ID_ALIAS, null); // SharetransferModule.getCurrentEncryptionKey(activity.appKey);
             SharetransferModule.requestStatusCheck(activity.appKey, encKey, true, (result) -> {
                 if(result instanceof Result.Error) {
                     renderError(((Result.Error<ShareStore>) result).exception);
                 } else if(result instanceof Result.Success) {
                     requireActivity().runOnUiThread(() -> {
-                        Snackbar snackbar = Snackbar.make(view1, "Request Status: " + ((Result.Success<ShareStore>) result).data, Snackbar.LENGTH_LONG);
-                        snackbar.show();
+                        try {
+                            ShareStore store = ((Result.Success<ShareStore>) result).data;
+                            Snackbar snackbar = Snackbar.make(view1, "Request Status: " + store.share(), Snackbar.LENGTH_LONG);
+                            snackbar.show();
+
+                        }
+                        catch (RuntimeError e) {
+                            throw new RuntimeException(e);
+                        }
+
                     });
                 }
             });
@@ -314,6 +326,7 @@ public class FirstFragment extends Fragment {
                 });
             } catch (RuntimeError | RuntimeException e) {
                 renderError(e);
+                hideLoading();
             }
         });
 
