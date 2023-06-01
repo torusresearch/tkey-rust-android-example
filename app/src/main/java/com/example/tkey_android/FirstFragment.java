@@ -252,11 +252,11 @@ public class FirstFragment extends Fragment {
                                 if (result1 instanceof Result.Error) {
                                     renderError(((Result.Error<ShareStore>) result1).exception);
                                 } else if (result1 instanceof Result.Success) {
+                                    // works till here.
                                     activity.tKey.reconstruct(reconstruct_result -> {
                                         if (reconstruct_result instanceof Result.Error) {
                                             renderError(((Result.Error<KeyReconstructionDetails>) reconstruct_result).exception);
                                         } else if (reconstruct_result instanceof Result.Success) {
-                                            // works till here.
                                             KeyReconstructionDetails details = ((Result.Success<KeyReconstructionDetails>) reconstruct_result).data;
                                             requireActivity().runOnUiThread(() -> {
                                                 try {
