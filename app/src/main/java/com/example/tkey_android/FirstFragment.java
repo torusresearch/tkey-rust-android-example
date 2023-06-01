@@ -22,6 +22,7 @@ import com.google.android.material.snackbar.Snackbar;
 import com.web3auth.tkey.RuntimeError;
 import com.web3auth.tkey.ThresholdKey.Common.PrivateKey;
 import com.web3auth.tkey.ThresholdKey.Common.Result;
+import com.web3auth.tkey.ThresholdKey.Common.ShareStore;
 import com.web3auth.tkey.ThresholdKey.GenerateShareStoreResult;
 import com.web3auth.tkey.ThresholdKey.KeyDetails;
 import com.web3auth.tkey.ThresholdKey.KeyReconstructionDetails;
@@ -173,6 +174,7 @@ public class FirstFragment extends Fragment {
                             String requestId = ((Result.Success<String>) result).data;
                             requireActivity().runOnUiThread(() -> {
                                 binding.resultView.setText("Request Id: " + requestId);
+                                activity.sharedpreferences.edit().putString("REQUEST_ID_ALIAS", requestId).apply();
                             });
                         }
                     });
@@ -189,22 +191,52 @@ public class FirstFragment extends Fragment {
                 if(result instanceof Result.Error) {
                     renderError(((Result.Error<ArrayList<String>>) result).exception);
                 } else if(result instanceof  Result.Success) {
-                    ArrayList<String> requests = ((Result.Success<ArrayList<String>>) result).data;
-                    String shareToShare = activity.sharedpreferences.getString(SHARE_ALIAS, null);
-                    String requestId = requests.get(0);
-                    SharetransferModule.approveRequestWithShareIndex(activity.appKey, requestId, shareToShare, (approveResult) -> {
-                        if(approveResult instanceof Result.Error) {
-                            renderError(((Result.Error<Boolean>) approveResult).exception);
-                        } else if(approveResult instanceof  Result.Success) {
-                            Boolean success = ((Result.Success<Boolean>) approveResult).data;
-                            requireActivity().runOnUiThread(() -> {
-                                binding.resultView.setText("Approved: " + success);
-                            });
-                        }
+                    try {
+                        ArrayList<String> requests = ((Result.Success<ArrayList<String>>) result).data;
+                        String requestId = requests.get(0);
+
+                        List<String> filters = new ArrayList<>();
+                        filters.add("1");
+                        ArrayList<String> indexes = activity.appKey.getShareIndexes();
+                        indexes.removeAll(filters);
+                        String index = indexes.get(0);
+
+
+                        SharetransferModule.approveRequestWithShareIndex(activity.appKey, requestId, index, (approveResult) -> {
+                            if(approveResult instanceof Result.Error) {
+                                renderError(((Result.Error<Boolean>) approveResult).exception);
+                            } else if(approveResult instanceof  Result.Success) {
+                                Boolean success = ((Result.Success<Boolean>) approveResult).data;
+                                requireActivity().runOnUiThread(() -> {
+                                    binding.resultView.setText("Approved: " + success);
+                                });
+                            }
+                        });
+                    } catch (JSONException e) {
+                        throw new RuntimeException(e);
+                    } catch (RuntimeError e) {
+                        throw new RuntimeException(e);
+                    }
+
+                }
+            });
+        });
+
+        binding.requestStatusCheck.setOnClickListener(view1 -> {
+            String encKey = activity.sharedpreferences.getString("REQUEST_ID_ALIAS", null); // SharetransferModule.getCurrentEncryptionKey(activity.appKey);
+            SharetransferModule.requestStatusCheck(activity.appKey, encKey, true, (result) -> {
+                if(result instanceof Result.Error) {
+                    renderError(((Result.Error<ShareStore>) result).exception);
+                } else if(result instanceof Result.Success) {
+
+                    requireActivity().runOnUiThread(() -> {
+                        binding.resultView.setText("Request Status: " + ((Result.Success<ShareStore>) result).data);
                     });
                 }
             });
         });
+
+
 
         binding.createThresholdKey.setOnClickListener(view1 -> {
             showLoading();

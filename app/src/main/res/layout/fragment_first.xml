@@ -79,6 +79,12 @@
                     android:text="Request New Share" />
 
                 <Button
+                    android:id="@+id/requestStatusCheck"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Request Status Check" />
+
+                <Button
                     android:id="@+id/lookForRequests"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
