@@ -26,7 +26,7 @@ import android.view.MenuItem;
 public class MainActivity extends AppCompatActivity {
     private AppBarConfiguration appBarConfiguration;
 
-    public ThresholdKey appKey;
+    public ThresholdKey tKey;
     public StorageLayer tkeyStorage;
     public ServiceProvider tkeyProvider;
 
@@ -37,7 +37,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String PREF_FILE_NAME = "app_shared_preferences";
 
     public void resetState() {
-        this.appKey = null;
+        this.tKey = null;
         this.tkeyProvider = null;
         this.tkeyStorage = null;
     }
