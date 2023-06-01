@@ -73,6 +73,18 @@
                     android:text="Login with Google" />
 
                 <Button
+                    android:id="@+id/requestNewShare"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Request New Share" />
+
+                <Button
+                    android:id="@+id/lookForRequests"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Look For Requests" />
+
+                <Button
                     android:id="@+id/createThresholdKey"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
