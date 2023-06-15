@@ -185,6 +185,9 @@ public class FirstFragment extends Fragment {
                                     requireActivity().runOnUiThread(() -> {
                                         Snackbar snackbar = Snackbar.make(view1, "Request Id: " + requestId, Snackbar.LENGTH_LONG);
                                         snackbar.show();
+                                        binding.requestNewShare.setEnabled(false);
+                                        binding.lookForRequests.setEnabled(true);
+                                        binding.cleanupRequests.setEnabled(true);
                                     });
                                 }
                             });
@@ -217,6 +220,7 @@ public class FirstFragment extends Fragment {
                                     Boolean success = ((Result.Success<Boolean>) approveResult).data;
                                     String msg = success ? "Approved: " + encPubKey : "FAILED to approve";
                                     requireActivity().runOnUiThread(() -> {
+                                        binding.requestStatusCheck.setEnabled(true);
                                         Snackbar snackbar = Snackbar.make(view1, msg, Snackbar.LENGTH_LONG);
                                         snackbar.show();
                                     });
@@ -273,6 +277,13 @@ public class FirstFragment extends Fragment {
             try {
                 SharetransferModule.cleanupRequest(activity.tKey);
                 requireActivity().runOnUiThread(() -> {
+                    binding.requestNewShare.setEnabled(true);
+                    binding.cleanupRequests.setEnabled(false);
+                    binding.lookForRequests.setEnabled(false);
+                    binding.requestStatusCheck.setEnabled(false);
+                    activity.transferKey = null;
+                    activity.transferStorage = null;
+                    activity.transferProvider = null;
                     Snackbar snackbar = Snackbar.make(view1, "Successfully cleaned up the requests", Snackbar.LENGTH_LONG);
                     snackbar.show();
                 });
@@ -911,6 +922,10 @@ public class FirstFragment extends Fragment {
             binding.changeSeedPhrase.setEnabled(false);
             binding.getSeedPhrase.setEnabled(false);
             binding.getAccounts.setEnabled(false);
+            binding.requestStatusCheck.setEnabled(false);
+            binding.cleanupRequests.setEnabled(false);
+            binding.requestNewShare.setEnabled(false);
+            binding.lookForRequests.setEnabled(false);
         });
     }
 
@@ -960,7 +975,7 @@ public class FirstFragment extends Fragment {
             binding.changeSeedPhrase.setEnabled(true);
             binding.getSeedPhrase.setEnabled(true);
             binding.getAccounts.setEnabled(false);
-
+            binding.requestNewShare.setEnabled(true);
         });
     }
 
