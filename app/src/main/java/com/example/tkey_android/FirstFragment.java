@@ -258,6 +258,8 @@ public class FirstFragment extends Fragment {
                                                 Snackbar snackbar = Snackbar.make(view1, "Request Status: " + private_key, Snackbar.LENGTH_LONG);
                                                 snackbar.show();
                                                 // note: after this share that was transferred would need to be saved as the device share
+                                                // this is not included in this example, the share is merely discarded since we are not intending
+                                                // to use this transferKey instance again (i.e share is lost)
                                             } catch (RuntimeError e) {
                                                 throw new RuntimeException(e);
                                             }
