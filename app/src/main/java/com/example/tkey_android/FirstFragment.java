@@ -75,7 +75,7 @@ public class FirstFragment extends Fragment {
     private final String SEED_PHRASE_SET_ALIAS = "SEED_PHRASE_SET_ALIAS";
     private final String SEED_PHRASE_ALIAS = "SEED_PHRASE_ALIAS";
 
-    private final String REQUEST_ID_ALIAS = "REQUEST_ID_ALIAS";
+    private String REQUEST_ID = "";
 
     @Override
     public View onCreateView(
@@ -166,27 +166,25 @@ public class FirstFragment extends Fragment {
 
         binding.requestNewShare.setOnClickListener(view1 -> {
             try {
-                activity.tkeyStorage = new StorageLayer(false, "https://metadata.tor.us", 2);
-                activity.tkeyProvider = new ServiceProvider(false, activity.postboxKey);
-                activity.tKey = new ThresholdKey(null, null, activity.tkeyStorage, activity.tkeyProvider, null, null, false, false);
-
-                activity.tKey.initialize(null, null, false, false, result -> {
+                activity.transferStorage = new StorageLayer(false, "https://metadata.tor.us", 2);
+                activity.transferProvider = new ServiceProvider(false, activity.postboxKey);
+                activity.transferKey = new ThresholdKey(null, null, activity.transferStorage, activity.transferProvider, null, null, false, false);
+                activity.transferKey.initialize(null, null, false, false, result -> {
                     if (result instanceof Result.Error) {
                         Exception e = ((Result.Error<KeyDetails>) result).exception;
                         renderError(e);
                     } else if (result instanceof Result.Success) {
                         requireActivity().runOnUiThread(() -> {
-                            KeyDetails details = ((Result.Success<KeyDetails>) result).data;
                             String userAgent = new WebView(getContext()).getSettings().getUserAgentString();
-                            SharetransferModule.requestNewShare(activity.tKey, userAgent, "[]", (result1) -> {
+                            SharetransferModule.requestNewShare(activity.transferKey, userAgent, "[]", (result1) -> {
                                 if (result1 instanceof Result.Error) {
                                     renderError(((Result.Error<String>) result1).exception);
                                 } else if (result1 instanceof Result.Success) {
                                     String requestId = ((Result.Success<String>) result1).data;
+                                    REQUEST_ID = requestId;
                                     requireActivity().runOnUiThread(() -> {
                                         Snackbar snackbar = Snackbar.make(view1, "Request Id: " + requestId, Snackbar.LENGTH_LONG);
                                         snackbar.show();
-                                        activity.sharedpreferences.edit().putString(REQUEST_ID_ALIAS, requestId).apply();
                                     });
                                 }
                             });
@@ -198,88 +196,77 @@ public class FirstFragment extends Fragment {
             }
         });
 
-        binding.lookForRequests.setOnClickListener(view1 -> {
-            // init and reconstruct original key here
-            SharetransferModule.lookForRequest(activity.tKey, (result) -> {
-                if (result instanceof Result.Error) {
-                    renderError(((Result.Error<ArrayList<String>>) result).exception);
-                } else if (result instanceof Result.Success) {
-                    ArrayList<String> requests = ((Result.Success<ArrayList<String>>) result).data;
-                    String encPubKey = requests.get(0);
+        binding.lookForRequests.setOnClickListener(view1 -> SharetransferModule.lookForRequest(activity.tKey, (result) -> {
+            if (result instanceof Result.Error) {
+                renderError(((Result.Error<ArrayList<String>>) result).exception);
+            } else if (result instanceof Result.Success) {
+                ArrayList<String> requests = ((Result.Success<ArrayList<String>>) result).data;
+                String encPubKey = requests.get(0);
 
-                    activity.tKey.generateNewShare((generateNewShareResult) -> {
-                        if (generateNewShareResult instanceof Result.Error) {
-                            renderError(((Result.Error<GenerateShareStoreResult>) generateNewShareResult).exception);
-                        } else if (generateNewShareResult instanceof Result.Success) {
-                            try {
-                                GenerateShareStoreResult generateShareStoreResult = ((Result.Success<GenerateShareStoreResult>) generateNewShareResult).data;
-                                String shareIndex = generateShareStoreResult.getIndex();
-                                SharetransferModule.approveRequestWithShareIndex(activity.tKey, encPubKey, shareIndex, (approveResult) -> {
-                                    if (approveResult instanceof Result.Error) {
-                                        renderError(((Result.Error<Boolean>) approveResult).exception);
-                                    } else if (approveResult instanceof Result.Success) {
-                                        Boolean success = ((Result.Success<Boolean>) approveResult).data;
-                                        String msg = success ? "Approved: " + encPubKey : "FAILED to approve";
+                activity.tKey.generateNewShare((generateNewShareResult) -> {
+                    if (generateNewShareResult instanceof Result.Error) {
+                        renderError(((Result.Error<GenerateShareStoreResult>) generateNewShareResult).exception);
+                    } else if (generateNewShareResult instanceof Result.Success) {
+                        try {
+                            GenerateShareStoreResult generateShareStoreResult = ((Result.Success<GenerateShareStoreResult>) generateNewShareResult).data;
+                            String shareIndex = generateShareStoreResult.getIndex();
+                            SharetransferModule.approveRequestWithShareIndex(activity.tKey, encPubKey, shareIndex, (approveResult) -> {
+                                if (approveResult instanceof Result.Error) {
+                                    renderError(((Result.Error<Boolean>) approveResult).exception);
+                                } else if (approveResult instanceof Result.Success) {
+                                    Boolean success = ((Result.Success<Boolean>) approveResult).data;
+                                    String msg = success ? "Approved: " + encPubKey : "FAILED to approve";
+                                    requireActivity().runOnUiThread(() -> {
+                                        Snackbar snackbar = Snackbar.make(view1, msg, Snackbar.LENGTH_LONG);
+                                        snackbar.show();
+                                    });
+                                }
+                            });
+                        } catch (RuntimeError e) {
+                            renderError(e);
+                        }
+                    }
+                });
+            }
+        }));
+
+        binding.requestStatusCheck.setOnClickListener(view1 -> {
+            String encKey = REQUEST_ID;
+            SharetransferModule.requestStatusCheck(activity.transferKey, encKey, true, (result1) -> {
+                if (result1 instanceof Result.Error) {
+                    renderError(((Result.Error<ShareStore>) result1).exception);
+                } else if (result1 instanceof Result.Success) {
+                    ShareStore data = ((Result.Success<ShareStore>) result1).data;
+                    try {
+                        String share = data.share();
+                        activity.transferKey.inputShare(share, null, input_share_result -> {
+                            if (input_share_result instanceof Result.Error) {
+                                renderError(((Result.Error<Void>) input_share_result).exception);
+                            } else if (input_share_result instanceof Result.Success) {
+                                activity.transferKey.reconstruct(reconstruct_result -> {
+                                    if (reconstruct_result instanceof Result.Error) {
+                                        renderError(((Result.Error<KeyReconstructionDetails>) reconstruct_result).exception);
+                                    } else if (reconstruct_result instanceof Result.Success) {
+                                        KeyReconstructionDetails details = ((Result.Success<KeyReconstructionDetails>) reconstruct_result).data;
                                         requireActivity().runOnUiThread(() -> {
-                                            Snackbar snackbar = Snackbar.make(view1, msg, Snackbar.LENGTH_LONG);
-                                            snackbar.show();
+                                            try {
+                                                String private_key = details.getKey();
+                                                Snackbar snackbar = Snackbar.make(view1, "Request Status: " + private_key, Snackbar.LENGTH_LONG);
+                                                snackbar.show();
+                                                // note: after this share that was transferred would need to be saved as the device share
+                                            } catch (RuntimeError e) {
+                                                throw new RuntimeException(e);
+                                            }
                                         });
                                     }
                                 });
-                            } catch (RuntimeError e) {
-                                renderError(e);
                             }
-                        }
-                    });
+                        });
+                    } catch (RuntimeError e) {
+                        throw new RuntimeException(e);
+                    }
                 }
             });
-        });
-
-        binding.requestStatusCheck.setOnClickListener(view1 -> {
-            try {
-                activity.tkeyStorage = new StorageLayer(false, "https://metadata.tor.us", 2);
-                activity.tkeyProvider = new ServiceProvider(false, activity.postboxKey);
-                activity.tKey = new ThresholdKey(null, null, activity.tkeyStorage, activity.tkeyProvider, null, null, false, false);
-
-                activity.tKey.initialize(null, null, false, false, result -> {
-                    if (result instanceof Result.Error) {
-                        Exception e = ((Result.Error<KeyDetails>) result).exception;
-                        renderError(e);
-                    } else if (result instanceof Result.Success) {
-                        requireActivity().runOnUiThread(() -> {
-                            String encKey = activity.sharedpreferences.getString(REQUEST_ID_ALIAS, null); // SharetransferModule.getCurrentEncryptionKey(activity.tKey);
-                            SharetransferModule.requestStatusCheck(activity.tKey, encKey, true, (result1) -> {
-                                if (result1 instanceof Result.Error) {
-                                    renderError(((Result.Error<ShareStore>) result1).exception);
-                                } else if (result1 instanceof Result.Success) {
-                                    // works till here.
-                                    activity.tKey.reconstruct(reconstruct_result -> {
-                                        if (reconstruct_result instanceof Result.Error) {
-                                            renderError(((Result.Error<KeyReconstructionDetails>) reconstruct_result).exception);
-                                        } else if (reconstruct_result instanceof Result.Success) {
-                                            KeyReconstructionDetails details = ((Result.Success<KeyReconstructionDetails>) reconstruct_result).data;
-                                            requireActivity().runOnUiThread(() -> {
-                                                try {
-                                                    String private_key = details.getKey();
-                                                    Snackbar snackbar = Snackbar.make(view1, "Request Status: " + private_key, Snackbar.LENGTH_LONG);
-                                                    snackbar.show();
-
-                                                    // note: after this share that was transferred would need to be saved as the device share
-                                                } catch (RuntimeError e) {
-                                                    throw new RuntimeException(e);
-                                                }
-                                            });
-
-                                        }
-                                    });
-                                }
-                            });
-                        });
-                    }
-                });
-            } catch (RuntimeError e) {
-                throw new RuntimeException(e);
-            }
         });
 
         binding.cleanupRequests.setOnClickListener(view1 -> {
@@ -293,7 +280,6 @@ public class FirstFragment extends Fragment {
                 renderError(e);
             }
         });
-
 
         binding.createThresholdKey.setOnClickListener(view1 -> {
             showLoading();
