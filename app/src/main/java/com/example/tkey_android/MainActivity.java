@@ -57,7 +57,7 @@ public class MainActivity extends AppCompatActivity {
         try {
             libversion = Version.current();
         } catch (RuntimeError e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Not able to load tkey-native", e);
         }
 
         sharedpreferences = getSharedPreferences(PREF_FILE_NAME,

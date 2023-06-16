@@ -159,8 +159,7 @@ public class FirstFragment extends Fragment {
                     }
                 });
             } catch (Exception e) {
-                // CustomAuth failed, cannot continue
-                throw new RuntimeException(e);
+                renderError(e);
             }
         });
 
@@ -195,7 +194,7 @@ public class FirstFragment extends Fragment {
                     }
                 });
             } catch (RuntimeError e) {
-                throw new RuntimeException(e);
+                renderError(e);
             }
         });
 
@@ -261,7 +260,7 @@ public class FirstFragment extends Fragment {
                                                 // this is not included in this example, the share is merely discarded since we are not intending
                                                 // to use this transferKey instance again (i.e share is lost)
                                             } catch (RuntimeError e) {
-                                                throw new RuntimeException(e);
+                                                renderError(e);
                                             }
                                         });
                                     }
@@ -269,7 +268,7 @@ public class FirstFragment extends Fragment {
                             }
                         });
                     } catch (RuntimeError e) {
-                        throw new RuntimeException(e);
+                        renderError(e);
                     }
                 }
             });
