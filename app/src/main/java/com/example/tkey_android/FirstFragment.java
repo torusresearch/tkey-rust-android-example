@@ -952,6 +952,10 @@ public class FirstFragment extends Fragment {
             binding.changeSeedPhrase.setEnabled(false);
             binding.getSeedPhrase.setEnabled(false);
             binding.getAccounts.setEnabled(false);
+            binding.requestNewShare.setEnabled(true);
+            binding.cleanupRequests.setEnabled(true);
+            binding.lookForRequests.setEnabled(true);
+            binding.requestStatusCheck.setEnabled(true);
         });
     }
 
