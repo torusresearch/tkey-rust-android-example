@@ -26,9 +26,13 @@ import android.view.MenuItem;
 public class MainActivity extends AppCompatActivity {
     private AppBarConfiguration appBarConfiguration;
 
-    public ThresholdKey appKey;
+    public ThresholdKey tKey;
     public StorageLayer tkeyStorage;
     public ServiceProvider tkeyProvider;
+
+    public ThresholdKey transferKey;
+    public StorageLayer transferStorage;
+    public ServiceProvider transferProvider;
 
     public String postboxKey;
 
@@ -37,9 +41,12 @@ public class MainActivity extends AppCompatActivity {
     private static final String PREF_FILE_NAME = "app_shared_preferences";
 
     public void resetState() {
-        this.appKey = null;
+        this.tKey = null;
         this.tkeyProvider = null;
         this.tkeyStorage = null;
+        this.transferKey = null;
+        this.transferProvider = null;
+        this.transferStorage = null;
     }
 
     @Override
@@ -50,7 +57,7 @@ public class MainActivity extends AppCompatActivity {
         try {
             libversion = Version.current();
         } catch (RuntimeError e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Not able to load tkey-native", e);
         }
 
         sharedpreferences = getSharedPreferences(PREF_FILE_NAME,

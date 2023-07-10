@@ -72,11 +72,24 @@
                     android:layout_height="wrap_content"
                     android:text="Login with Google" />
 
+                <View
+                    android:id="@+id/divider3"
+                    android:layout_width="match_parent"
+                    android:layout_height="10dp"
+                    android:background="?android:attr/listDivider" />
+
+                <TextView
+                    android:id="@+id/textview_first7"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Core"
+                    android:textAlignment="center" />
+
                 <Button
                     android:id="@+id/createThresholdKey"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Init and Reconstruct tKey" />
+                    android:text="Init and Reconstruct tKey (Device 1)" />
 
                 <Button
                     android:id="@+id/resetAccount"
@@ -115,7 +128,7 @@
                     android:background="?android:attr/listDivider" />
 
                 <TextView
-                    android:id="@+id/textview_first2"
+                    android:id="@+id/textview_first6"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Security Question"
@@ -138,6 +151,44 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Show Password" />
+
+                <View
+                    android:id="@+id/divider9"
+                    android:layout_width="match_parent"
+                    android:layout_height="10dp"
+                    android:background="?android:attr/listDivider" />
+
+                <TextView
+                    android:id="@+id/textview_first2"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Share Transfer Module"
+                    android:textAlignment="center" />
+
+                <Button
+                    android:id="@+id/requestNewShare"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Request New Share (Device 2)" />
+
+                <Button
+                    android:id="@+id/lookForRequests"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Look For Requests (Device 1)" />
+
+
+                <Button
+                    android:id="@+id/requestStatusCheck"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Request Status Check (Device 2)" />
+
+                <Button
+                    android:id="@+id/cleanupRequests"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Cleanup Requests" />
 
                 <View
                     android:id="@+id/divider5"
