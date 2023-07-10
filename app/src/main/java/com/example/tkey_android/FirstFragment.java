@@ -325,13 +325,12 @@ public class FirstFragment extends Fragment {
                                             ArrayList<String> indexes = activity.tKey.getShareIndexes();
                                             indexes.removeAll(filters);
                                             String index = indexes.get(0);
-                                            String shareToSave = activity.tKey.outputShare(index, null);
+                                            String shareToSave = activity.tKey.outputShare(index);
                                             SharedPreferences.Editor editor = activity.sharedpreferences.edit();
                                             editor.putString(SHARE_ALIAS, shareToSave);
                                             editor.putString(SHARE_INDEX_ALIAS, index);
                                             editor.apply();
                                             hideLoading();
-
                                         } catch (RuntimeError | JSONException e) {
                                             renderError(e);
                                             hideLoading();
@@ -814,8 +813,8 @@ public class FirstFragment extends Fragment {
                     try {
                         GenerateShareStoreResult shareStoreResult = ((Result.Success<GenerateShareStoreResult>) result).data;
                         String index = shareStoreResult.getIndex();
-                        String share = activity.tKey.outputShare(index, null);
-                        String serialized = ShareSerializationModule.serializeShare(activity.tKey, share, null);
+                        String share = activity.tKey.outputShare(index);
+                        String serialized = ShareSerializationModule.serializeShare(activity.tKey, share);
                         Snackbar snackbar = Snackbar.make(view1, "Serialization result: " + serialized, Snackbar.LENGTH_LONG);
                         snackbar.show();
                         hideLoading();
