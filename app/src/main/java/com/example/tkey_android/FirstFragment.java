@@ -1,5 +1,7 @@
 package com.example.tkey_android;
+import android.content.Context;
 
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -17,7 +19,6 @@ import com.web3auth.tkey.ThresholdKey.Common.KeyPoint;
 import com.web3auth.tkey.ThresholdKey.Common.PrivateKey;
 import com.web3auth.tkey.ThresholdKey.Common.Result;
 import com.web3auth.tkey.ThresholdKey.KeyDetails;
-import com.web3auth.tkey.ThresholdKey.KeyReconstructionDetails;
 import com.web3auth.tkey.ThresholdKey.Modules.TSSModule;
 import com.web3auth.tkey.ThresholdKey.RssComm;
 import com.web3auth.tkey.ThresholdKey.ServiceProvider;
@@ -43,26 +44,18 @@ import org.torusresearch.torusutils.TorusUtils;
 import org.torusresearch.torusutils.types.SessionToken;
 import org.torusresearch.torusutils.types.TorusCtorOptions;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.security.Key;
+
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.UnrecoverableEntryException;
-import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 
-import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 
 public class FirstFragment extends Fragment {
@@ -72,28 +65,14 @@ public class FirstFragment extends Fragment {
     private FragmentFirstBinding binding;
     private LoginVerifier selectedLoginVerifier;
     private CustomAuth torusSdk;
-
+    private static final String PREF_NAME = "TKEY";
+    private static final String STRING_KEY = "FactorKey";
 
     private final String[] allowedBrowsers = new String[]{
             "com.android.chrome", // Chrome stable
             "com.google.android.apps.chrome", // Chrome system
             "com.android.chrome.beta", // Chrome beta
     };
-
-    //    To be used for saving/reading data from shared prefs
-    private final String SHARE_ALIAS = "SHARE";
-    private final String SHARE_INDEX_ALIAS = "SHARE_INDEX";
-    private final String SHARE_INDEX_GENERATED_ALIAS = "SHARE_INDEX_GENERATED_ALIAS";
-    private final String ADD_PASSWORD_SET_ALIAS = "ADD_PASSWORD_SET_ALIAS";
-
-    private final String SEED_PHRASE_SET_ALIAS = "SEED_PHRASE_SET_ALIAS";
-    private final String SEED_PHRASE_ALIAS = "SEED_PHRASE_ALIAS";
-
-    private String REQUEST_ID = "";
-
-    // Set a value in the keystore
-    private static final String KEYSTORE_FILENAME = "my_keystore.bks";
-    private static final String KEYSTORE_PASSWORD = "keystorePassword";
 
     @Override
     public View onCreateView(
@@ -195,17 +174,6 @@ public class FirstFragment extends Fragment {
             try {
 
                 showLoading();
-                // Keystore initialization from local bks file
-                String alias = "myAlias";
-                File keystoreFile = new File(getContext().getFilesDir(), KEYSTORE_FILENAME);
-                KeyStore keyStore = KeyStore.getInstance("BKS");
-                if (keystoreFile.exists()) {
-                    // create a new file with password if not exists
-                    keyStore.load(new FileInputStream(keystoreFile), KEYSTORE_PASSWORD.toCharArray());
-                } else {
-                    // load file with password if exists
-                    keyStore.load(null, KEYSTORE_PASSWORD.toCharArray());
-                }
 
                 // prepare tkey parameters
                 String verifierId = activity.userInfo.getVerifierId();
@@ -263,9 +231,10 @@ public class FirstFragment extends Fragment {
 
                     // fetch key from keystore and assign it to factorKey
                     String factorKey = "";
-                    SecretKey retrievedKey = getKey(keyStore, alias, KEYSTORE_PASSWORD.toCharArray());
+                    String retrievedKey = getStringFromSharedPreferences();
+
                     if (retrievedKey != null) {
-                        factorKey = new String(retrievedKey.getEncoded(), "UTF-8");
+                        factorKey = retrievedKey;
                     } else {
                         throw new Exception("factor key not found in storage");
                     }
@@ -364,13 +333,8 @@ public class FirstFragment extends Fragment {
                     });
                     lock6.await();
 
-                    byte[] factorKeyStore = factorKey.hex.getBytes("UTF-8");
-                    // Store the byte array as a keystore entry
-                    setKey(keyStore, alias, factorKeyStore, KEYSTORE_PASSWORD.toCharArray());
-                    // Save keystore to file
-                    try (FileOutputStream fos = new FileOutputStream(keystoreFile)) {
-                        keyStore.store(fos, KEYSTORE_PASSWORD.toCharArray());
-                    }
+                    saveStringToSharedPreferences(factorKey.hex);
+
                     System.out.println("factorKey");
                     System.out.println(factorKey.hex);
 
@@ -412,6 +376,18 @@ public class FirstFragment extends Fragment {
     private static void setKey(KeyStore keyStore, String alias, byte[] keyBytes, char[] password) throws KeyStoreException {
         SecretKey secretKey = new javax.crypto.spec.SecretKeySpec(keyBytes, "AES");
         keyStore.setEntry(alias, new KeyStore.SecretKeyEntry(secretKey), new KeyStore.PasswordProtection(password));
+    }
+
+    private void saveStringToSharedPreferences(String data) {
+        SharedPreferences sharedPreferences = getActivity().getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putString(STRING_KEY, data);
+        editor.apply();
+    }
+
+    private String getStringFromSharedPreferences() {
+        SharedPreferences sharedPreferences = getActivity().getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+        return sharedPreferences.getString(STRING_KEY, null);
     }
 
     private void renderError(Throwable error) {
