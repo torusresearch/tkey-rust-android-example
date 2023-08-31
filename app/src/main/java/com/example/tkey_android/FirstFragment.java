@@ -25,6 +25,7 @@ import com.web3auth.tkey.ThresholdKey.ServiceProvider;
 import com.web3auth.tkey.ThresholdKey.StorageLayer;
 import com.web3auth.tkey.ThresholdKey.ThresholdKey;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.torusresearch.customauth.CustomAuth;
 import org.torusresearch.customauth.types.Auth0ClientOptions.Auth0ClientOptionsBuilder;
@@ -167,6 +168,30 @@ public class FirstFragment extends Fragment {
                 });
             } catch (Exception e) {
                 renderError(e);
+            }
+        });
+
+        binding.tKeyReset.setOnClickListener(view1 -> {
+            try {
+                showLoading();
+
+                activity.transferStorage = new StorageLayer(true, "https://metadata.tor.us", 2);
+                activity.transferProvider = new ServiceProvider(true, activity.postboxKey,true, null, null, null);
+                activity.transferKey = new ThresholdKey(null, null, activity.transferStorage, activity.transferProvider, null, null, true, false, null);
+
+                CountDownLatch lock = new CountDownLatch(1);
+                activity.transferKey.storage_layer_set_metadata(activity.postboxKey, "{ \"message\": \"KEY_NOT_FOUND\" }", result -> {
+                    if (result instanceof Result.Error) {
+                        throw new RuntimeException("Could not initialize tkey");
+                    }
+                    lock.countDown();
+                });
+                lock.await();
+
+            } catch (InterruptedException | JSONException | RuntimeError e) {
+                throw new RuntimeException(e);
+            } finally {
+                hideLoading();
             }
         });
 
@@ -407,6 +432,7 @@ public class FirstFragment extends Fragment {
         requireActivity().runOnUiThread(() -> {
             binding.googleLogin.setEnabled(true);
             binding.tKeyMPC.setEnabled(false);
+            binding.tKeyReset.setEnabled(false);
         });
     }
 
@@ -414,6 +440,7 @@ public class FirstFragment extends Fragment {
         requireActivity().runOnUiThread(() -> {
             binding.googleLogin.setEnabled(false);
             binding.tKeyMPC.setEnabled(true);
+            binding.tKeyReset.setEnabled(true);
         });
     }
 
@@ -422,6 +449,7 @@ public class FirstFragment extends Fragment {
         requireActivity().runOnUiThread(() -> {
             binding.googleLogin.setEnabled(false);
             binding.tKeyMPC.setEnabled(false);
+            binding.tKeyReset.setEnabled(false);
         });
     }
 
