@@ -3,11 +3,13 @@ package com.example.tkey_android;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.util.Pair;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
@@ -15,18 +17,23 @@ import androidx.navigation.fragment.NavHostFragment;
 
 import com.example.tkey_android.databinding.FragmentFirstBinding;
 import com.google.android.material.snackbar.Snackbar;
+import com.google.gson.Gson;
 import com.web3auth.tkey.RuntimeError;
 import com.web3auth.tkey.ThresholdKey.Common.KeyPoint;
 import com.web3auth.tkey.ThresholdKey.Common.PrivateKey;
 import com.web3auth.tkey.ThresholdKey.Common.Result;
 import com.web3auth.tkey.ThresholdKey.KeyDetails;
 import com.web3auth.tkey.ThresholdKey.KeyReconstructionDetails;
-import com.web3auth.tkey.ThresholdKey.Modules.PrivateKeysModule;
 import com.web3auth.tkey.ThresholdKey.Modules.TSSModule;
 import com.web3auth.tkey.ThresholdKey.RssComm;
 import com.web3auth.tkey.ThresholdKey.ServiceProvider;
 import com.web3auth.tkey.ThresholdKey.StorageLayer;
 import com.web3auth.tkey.ThresholdKey.ThresholdKey;
+import com.web3auth.tss_client_android.client.TSSClient;
+import com.web3auth.tss_client_android.client.TSSClientError;
+import com.web3auth.tss_client_android.client.TSSHelpers;
+import com.web3auth.tss_client_android.client.util.Triple;
+import com.web3auth.tss_client_android.dkls.Precompute;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -45,12 +52,30 @@ import org.torusresearch.fetchnodedetails.types.TorusNetwork;
 import org.torusresearch.torusutils.TorusUtils;
 import org.torusresearch.torusutils.types.SessionToken;
 import org.torusresearch.torusutils.types.TorusCtorOptions;
+import org.web3j.crypto.Credentials;
+import org.web3j.crypto.RawTransaction;
+import org.web3j.protocol.Web3j;
+import org.web3j.protocol.core.DefaultBlockParameterName;
+import org.web3j.protocol.core.methods.response.EthChainId;
+import org.web3j.protocol.core.methods.response.EthGasPrice;
+import org.web3j.protocol.core.methods.response.EthGetTransactionCount;
+import org.web3j.protocol.core.methods.response.EthSendTransaction;
+import org.web3j.protocol.http.HttpService;
+import org.web3j.utils.Convert;
 
+import java.io.IOException;
+import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Base64;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class FirstFragment extends Fragment {
@@ -60,6 +85,10 @@ public class FirstFragment extends Fragment {
     private FragmentFirstBinding binding;
     private LoginVerifier selectedLoginVerifier;
     private CustomAuth torusSdk;
+
+    static {
+        System.loadLibrary("dkls-native");
+    }
 
     private static final String PREF_NAME = "TKEY";
     private static final String STRING_KEY = "FactorKey";
@@ -80,6 +109,19 @@ public class FirstFragment extends Fragment {
     private final String SEED_PHRASE_ALIAS = "SEED_PHRASE_ALIAS";
 
     private String REQUEST_ID = "";
+
+    private String factor_key = "";
+    private int tssNonce;
+    private String tssShare = "";
+    private String tssIndex = "";
+    private String verifierId = "";
+    private String verifier = "";
+    private NodeDetails nodeDetail;
+    private String evmAddress;
+    private AtomicReference<String> pubKey = new AtomicReference<>("");
+    private ArrayList<String> signatureString;
+    private Pair<String, String> tssShareResponse = new Pair<>("", "");
+    private Gson gson = new Gson();
 
     @Override
     public View onCreateView(
@@ -159,6 +201,7 @@ public class FirstFragment extends Fragment {
                         hideLoading();
                     } else {
                         activity.runOnUiThread(() -> {
+                            evmAddress = torusLoginResponse.getPublicAddress();
                             String publicAddress = torusLoginResponse.getPublicAddress();
                             activity.postboxKey = torusLoginResponse.getPrivateKey().toString(16);
                             activity.userInfo = torusLoginResponse.getUserInfo();
@@ -216,24 +259,25 @@ public class FirstFragment extends Fragment {
                 showLoading();
 
                 // prepare tkey parameters
-                String verifierId = activity.userInfo.getVerifierId();
-                String verifier = activity.userInfo.getVerifier();
+                verifierId = activity.userInfo.getVerifierId();
+                verifier = activity.userInfo.getVerifier();
 
                 List<SessionToken> sessionTokenData = activity.sessionData.getSessionTokenData();
-                ArrayList<String> signatureString = new ArrayList<>();
+                signatureString = new ArrayList<>();
                 for (SessionToken item : sessionTokenData) {
                     if (item != null) {
-                        JSONObject temp = new JSONObject();
-                        temp.put("data", item.getToken());
-                        temp.put("sig", item.getSignature());
-                        signatureString.add(temp.toString());
+                        LinkedHashMap<String, Object> msg = new LinkedHashMap<>();
+                        msg.put("data", item.getToken());
+                        msg.put("sig", item.getSignature());
+                        String jsonData = gson.toJson(msg);
+                        signatureString.add(jsonData);
                     }
                 }
 
                 // node details
                 FetchNodeDetails nodeManager = new FetchNodeDetails(TorusNetwork.SAPPHIRE_DEVNET);
                 CompletableFuture<NodeDetails> nodeDetailResult = nodeManager.getNodeDetails(verifier, verifierId);
-                NodeDetails nodeDetail = nodeDetailResult.get();
+                nodeDetail = nodeDetailResult.get();
 
                 // Torus Utils
                 TorusCtorOptions torusOptions = new TorusCtorOptions("Custom");
@@ -304,7 +348,6 @@ public class FirstFragment extends Fragment {
                                         throw new RuntimeException(e);
                                     }
 
-                                    AtomicReference<String> pubKey = new AtomicReference<>("");
                                     TSSModule.getTSSPubKey(activity.tKey, tag, tssPubResult -> {
                                         if (tssPubResult instanceof Result.Error) {
                                             throw new RuntimeException("Could not getTSSPubKey tkey");
@@ -315,6 +358,17 @@ public class FirstFragment extends Fragment {
                                         } catch (RuntimeError | JSONException e) {
                                             throw new RuntimeException(e);
                                         }
+                                    });
+
+                                    tssNonce = TSSModule.getTSSNonce(activity.tKey, tag, false);
+
+                                    TSSModule.getTSSShare(activity.transferKey, tag, factorKey, 0, _result -> {
+                                        if (_result instanceof Result.Error) {
+                                            System.out.println("Could not create tagged tss shares for tkey");
+                                        }
+                                        tssShareResponse = ((Result.Success<Pair<String, String>>) _result).data;
+                                        tssShare = tssShareResponse.second;
+                                        tssIndex = tssShareResponse.first;
                                     });
                                 });
                             });
@@ -947,6 +1001,247 @@ public class FirstFragment extends Fragment {
 //                renderError(e);
 //            }
 //        });
+
+        binding.tssSignMessage.setOnClickListener(_view -> {
+            sign(true);
+        });
+
+        binding.tssSignTransaction.setOnClickListener(_view -> {
+            try {
+                EthereumTssAccount tssAccount = new EthereumTssAccount(evmAddress, pubKey.get(), factor_key, tssNonce, tssShare, tssIndex,
+                        "default", verifier, verifierId, nodeDetail.getTorusIndexes(), nodeDetail.getTorusNodeTSSEndpoints(),
+                        signatureString);
+
+                String url = "https://rpc.ankr.com/eth_goerli";
+                Web3j web3j = Web3j.build(new HttpService(url));
+                double amount = 0.001;
+                String fromAdress = tssAccount.address;
+                String toAddress = tssAccount.address;
+                AtomicReference<RawTransaction> rawTransaction = new AtomicReference<>();
+                new Thread(() -> {
+                    try {
+                        EthGetTransactionCount ethGetTransactionCount = web3j.ethGetTransactionCount(
+                                fromAdress,
+                                DefaultBlockParameterName.LATEST
+                        ).send();
+                        String data = "hello world";
+                        BigInteger nonce = ethGetTransactionCount.getTransactionCount();
+                        BigInteger value = Convert.toWei(Double.toString(amount), Convert.Unit.ETHER).toBigInteger();
+                        BigInteger gasLimit = BigInteger.valueOf(21000);
+                        System.out.println("GasLimit: " + gasLimit);
+
+                        EthGasPrice gasPriceResponse = web3j.ethGasPrice().send();
+                        BigInteger gasPrice = gasPriceResponse.getGasPrice();
+                        System.out.println("GasPrice: " + gasPrice);
+
+                        EthChainId chainIdResponse = web3j.ethChainId().sendAsync().get();
+                        BigInteger chainId = chainIdResponse.getChainId();
+
+                        String privateKey = "fba4137335dc20dc23ad3dcd9f4ad728370b09131a6a14abf6c839748700780d";
+                        Credentials credentials = Credentials.create(privateKey);
+
+                        rawTransaction.set(RawTransaction.createTransaction(
+                                chainId.longValue(),
+                                nonce,
+                                gasLimit,
+                                credentials.getAddress(),
+                                value,
+                                data,
+                                gasPrice,
+                                gasPrice
+                        ));
+
+                /*byte[] signedMessage = TransactionEncoder.signMessage(rawTransaction.get(), credentials);
+                System.out.println("SignedMessage: " + signedMessage);
+                String _signature= Numeric.toHexString(signedMessage);
+                System.out.println("Signature: " + _signature);
+                EthSendTransaction _ethSendTransaction = web3j.ethSendRawTransaction(_signature).send();
+                System.out.println("Transaction: " + _ethSendTransaction.getTransactionHash());*/
+
+                        TSSClient client;
+                        Map<String, String> coeffs;
+                        Pair<TSSClient, Map<String, String>> clientCoeffsPair;
+                        try {
+                            clientCoeffsPair = TssClientHelper.helperTssClient("default", tssNonce, pubKey.get(), tssShare, tssIndex,
+                                    Arrays.asList(nodeDetail.getTorusIndexes()), factor_key, this.verifier, verifierId, Arrays.asList(nodeDetail.getTorusNodeTSSEndpoints()));
+                            client = clientCoeffsPair.first;
+                            coeffs = clientCoeffsPair.second;
+
+                            // Wait for sockets to be connected
+                            boolean connected;
+                            try {
+                                connected = client.checkConnected();
+                            } catch (Exception e) {
+                                throw new EthereumSignerError(EthereumSignerError.ErrorType.UNKNOWN_ERROR);
+                            }
+
+                            if(connected) {
+                                new Thread(() -> {
+                                    Precompute precompute;
+                                    try {
+                                        precompute = client.precompute((Map<String, String>) coeffs, signatureString);
+                                    } catch (Exception e) {
+                                        System.out.println("Exception:" + e);
+                                        e.printStackTrace();
+                                        throw new EthereumSignerError(EthereumSignerError.ErrorType.UNKNOWN_ERROR);
+                                    }
+
+                                    boolean ready;
+                                    try {
+                                        ready = client.isReady();
+                                    } catch (Exception e) {
+                                        throw new EthereumSignerError(EthereumSignerError.ErrorType.UNKNOWN_ERROR);
+                                    }
+
+                                    if (ready) {
+                                        //to check
+                                        String msg = rawTransaction.get().getData();
+                                        if (data == null) {
+                                            throw new EthereumSignerError(EthereumSignerError.ErrorType.EMPTY_RAW_TRANSACTION);
+                                        }
+                                        String msgHash = TSSHelpers.hashMessage(msg);
+
+                                        String signingMessage = null;
+                                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                                            signingMessage = Base64.getEncoder().encodeToString(msgHash.getBytes(StandardCharsets.UTF_8));
+                                        }
+
+                                        Triple<BigInteger, BigInteger, Byte> signatureResult;
+                                        try {
+                                            signatureResult = client.sign(msgHash, true, "", precompute, signatureString);
+                                        } catch (TSSClientError e) {
+                                            throw new RuntimeException(e);
+                                        }
+                                        try {
+                                            client.cleanup(signatureString.toArray(new String[0]));
+                                        } catch (TSSClientError e) {
+                                            throw new RuntimeException(e);
+                                        }
+
+                                        String uncompressedPubKey;
+                                        try {
+                                            uncompressedPubKey = new KeyPoint(pubKey.get()).getPublicKey(KeyPoint.PublicKeyEncoding.FullAddress);
+                                        } catch (RuntimeError e) {
+                                            throw new RuntimeException(e);
+                                        }
+                                        boolean verify = TSSHelpers.verifySignature(msgHash, signatureResult.getFirst(),
+                                                signatureResult.getSecond(), signatureResult.getThird(), TssClientHelper.convertToBytes(uncompressedPubKey));
+
+                                        if (verify) {
+                                            String signature = TSSHelpers.hexSignature(signatureResult.getFirst(),
+                                                    signatureResult.getSecond(), signatureResult.getThird());
+                                            activity.runOnUiThread(() -> TssClientHelper.showAlert(activity, "Signature: "+ signature));
+
+                                            try {
+                                                EthSendTransaction ethSendTransaction = web3j.ethSendRawTransaction("0x" + signature).send();
+                                                if(ethSendTransaction.getError() != null) {
+                                                    System.out.println("Transaction: " + ethSendTransaction.getTransactionHash());
+                                                }
+                                            } catch (IOException e) {
+                                                throw new RuntimeException(e);
+                                            }
+                                        } else {
+                                            activity.runOnUiThread(() -> Toast.makeText(activity, "Signature could not be verified", Toast.LENGTH_LONG).show());
+                                        }
+
+                                    } else {
+                                        activity.runOnUiThread(() -> Toast.makeText(activity, "Client is not ready, please try again", Toast.LENGTH_LONG).show());
+                                    }
+                                }).start();
+                            } else {
+                                activity.runOnUiThread(() -> Toast.makeText(activity, "Client is not connected, please try again", Toast.LENGTH_LONG).show());
+                            }
+                        } catch (Exception | RuntimeError e) {
+                            throw new RuntimeException(e);
+                        }
+                    } catch (IOException | ExecutionException | InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                }).start();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    private void sign(boolean isSigningMessage) {
+        TSSClient client;
+        Map<String, String> coeffs;
+        Pair<TSSClient, Map<String, String>> clientCoeffsPair;
+        try {
+            clientCoeffsPair = TssClientHelper.helperTssClient("default", tssNonce, pubKey.get(), tssShare, tssIndex,
+                    Arrays.asList(nodeDetail.getTorusIndexes()), factor_key, this.verifier, verifierId, Arrays.asList(nodeDetail.getTorusNodeTSSEndpoints()));
+            client = clientCoeffsPair.first;
+            coeffs = clientCoeffsPair.second;
+
+            // Wait for sockets to be connected
+            boolean connected;
+            try {
+                connected = client.checkConnected();
+            } catch (Exception e) {
+                throw new EthereumSignerError(EthereumSignerError.ErrorType.UNKNOWN_ERROR);
+            }
+
+            if(connected) {
+                new Thread(() -> {
+                    Precompute precompute;
+                    try {
+                        precompute = client.precompute((Map<String, String>) coeffs, signatureString);
+                    } catch (Exception e) {
+                        System.out.println("Exception:" + e);
+                        e.printStackTrace();
+                        throw new EthereumSignerError(EthereumSignerError.ErrorType.UNKNOWN_ERROR);
+                    }
+
+                    boolean ready;
+                    try {
+                        ready = client.isReady();
+                    } catch (Exception e) {
+                        throw new EthereumSignerError(EthereumSignerError.ErrorType.UNKNOWN_ERROR);
+                    }
+
+                    if (ready) {
+                        String msg = "hello world";
+                        String msgHash = TSSHelpers.hashMessage(msg);
+                        Triple<BigInteger, BigInteger, Byte> signatureResult;
+                        try {
+                            signatureResult = client.sign(msgHash, true, msg, precompute, signatureString);
+                        } catch (TSSClientError e) {
+                            throw new RuntimeException(e);
+                        }
+                        try {
+                            client.cleanup(signatureString.toArray(new String[0]));
+                        } catch (TSSClientError e) {
+                            throw new RuntimeException(e);
+                        }
+
+                        String uncompressedPubKey;
+                        try {
+                            uncompressedPubKey = new KeyPoint(pubKey.get()).getPublicKey(KeyPoint.PublicKeyEncoding.FullAddress);
+                        } catch (RuntimeError e) {
+                            throw new RuntimeException(e);
+                        }
+                        boolean verify = TSSHelpers.verifySignature(msgHash, signatureResult.getFirst(),
+                                signatureResult.getSecond(), signatureResult.getThird(), TssClientHelper.convertToBytes(uncompressedPubKey));
+
+                        if (verify) {
+                            String signature = "Signature: " + TSSHelpers.hexSignature(signatureResult.getFirst(),
+                                    signatureResult.getSecond(), signatureResult.getThird());
+                            requireActivity().runOnUiThread(() -> TssClientHelper.showAlert(requireActivity(), signature));
+                        } else {
+                            requireActivity().runOnUiThread(() -> Toast.makeText(requireActivity(), "Signature could not be verified", Toast.LENGTH_LONG).show());
+                        }
+
+                    } else {
+                        requireActivity().runOnUiThread(() -> Toast.makeText(requireActivity(), "Client is not ready, please try again", Toast.LENGTH_LONG).show());
+                    }
+                }).start();
+            } else {
+                requireActivity().runOnUiThread(() -> Toast.makeText(requireActivity(), "Client is not connected, please try again", Toast.LENGTH_LONG).show());
+            }
+        } catch (Exception | RuntimeError e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private void renderError(Throwable error) {
@@ -984,6 +1279,8 @@ public class FirstFragment extends Fragment {
 //            binding.deleteShare.setEnabled(false);
 //            binding.deleteSeedPhrase.setEnabled(false);
             binding.resetAccount.setEnabled(false);
+            binding.tssSignMessage.setEnabled(false);
+            binding.tssSignTransaction.setEnabled(false);
 //            binding.getKeyDetails.setEnabled(false);
 //            binding.addPassword.setEnabled(false);
 //            binding.changePassword.setEnabled(false);
@@ -1012,6 +1309,8 @@ public class FirstFragment extends Fragment {
 //            binding.deleteShare.setEnabled(false);
 //            binding.deleteSeedPhrase.setEnabled(false);
             binding.resetAccount.setEnabled(true);
+            binding.tssSignMessage.setEnabled(false);
+            binding.tssSignTransaction.setEnabled(false);
 //            binding.getKeyDetails.setEnabled(false);
 //            binding.addPassword.setEnabled(false);
 //            binding.changePassword.setEnabled(false);
@@ -1037,6 +1336,9 @@ public class FirstFragment extends Fragment {
 //            binding.deleteShare.setEnabled(activity.sharedpreferences.getString(SHARE_INDEX_GENERATED_ALIAS, null) != null);
 //            binding.deleteSeedPhrase.setEnabled(true);
             binding.resetAccount.setEnabled(true);
+            binding.tssSignMessage.setEnabled(true);
+            binding.tssSignTransaction.setEnabled(true);
+
 //            binding.getKeyDetails.setEnabled(true);
 //            binding.addPassword.setEnabled(!activity.sharedpreferences.getString(ADD_PASSWORD_SET_ALIAS, "").equals("SET"));
 //            binding.changePassword.setEnabled(false);
