@@ -312,16 +312,17 @@ public class FirstFragment extends Fragment {
                                         pubKey.set(((Result.Success<String>) tssPubResult).data);
                                         try {
                                             HashMap<String, ArrayList<String>> defaultTssShareDescription = activity.tKey.getShareDescriptions();
+                                            userHasCreatedTkey();
+                                            hideLoading();
+                                            binding.resultView.append("Log: \n");
+                                            binding.resultView.append("Tkey Creaetion Successfull" + "\n");
                                         } catch (RuntimeError | JSONException e) {
                                             throw new RuntimeException(e);
                                         }
                                     });
                                 });
                             });
-                            userHasCreatedTkey();
-                            hideLoading();
-                            binding.resultView.append("Log: \n");
-                            binding.resultView.append("Tkey Creaetion Successfull" + "\n");
+
                         } else {
                             // new user
                             // check if reconstruction is working before creating tagged share
@@ -345,7 +346,6 @@ public class FirstFragment extends Fragment {
                                     }
                                     String defaultTag = "default";
 
-                                    //                    re("factorPub", factorPub);
                                     PrivateKey finalFactorKey = factorKey;
                                     try {
                                         TSSModule.createTaggedTSSTagShare(activity.tKey, defaultTag, null, factorPub, 2, nodeDetail, torusUtils, createTaggedResult -> {
@@ -370,10 +370,10 @@ public class FirstFragment extends Fragment {
                                                     TSSModule.backupShareWithFactorKey(activity.tKey, shareIndexes.get(0), finalFactorKey.hex);
 
                                                     // add share description
-                                                        description.put("module", "Device Factor key");
-                                                        description.put("tssTag", defaultTag);
-                                                        description.put("tssShareIndex", 2);
-                                                        description.put("dateAdded", System.currentTimeMillis()/1000);
+                                                    description.put("module", "Device Factor key");
+                                                    description.put("tssTag", defaultTag);
+                                                    description.put("tssShareIndex", 2);
+                                                    description.put("dateAdded", System.currentTimeMillis()/1000);
                                                 } catch (JSONException | RuntimeError e) {
                                                     throw new RuntimeException(e);
                                                 }
