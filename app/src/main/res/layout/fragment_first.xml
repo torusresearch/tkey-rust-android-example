@@ -73,13 +73,13 @@
                     android:text="Login with Google" />
 
                 <Button
-                    android:id="@+id/tKeyMPC"
+                    android:id="@+id/createThresholdKey"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Tkey MPC" />
 
                 <Button
-                    android:id="@+id/tKeyReset"
+                    android:id="@+id/resetAccount"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Tkey Reset" />
