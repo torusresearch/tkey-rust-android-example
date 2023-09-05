@@ -8,8 +8,10 @@ import com.web3auth.tss_client_android.client.TSSHelpers;
 import com.web3auth.tss_client_android.client.util.Triple;
 import com.web3auth.tss_client_android.dkls.Precompute;
 
+import org.web3j.crypto.Credentials;
 import org.web3j.crypto.RawTransaction;
 import org.web3j.crypto.Sign;
+import org.web3j.crypto.TransactionEncoder;
 
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -18,7 +20,7 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
-public class EthereumTssAccount extends Sign {
+public class EthereumTssAccount extends TransactionEncoder {
     public String selectedTag;
     public String verifier;
     public String factorKey;
@@ -47,6 +49,14 @@ public class EthereumTssAccount extends Sign {
         this.tssShare = tssShare;
         this.address = evmAddress;
         this.authSigs = authSigs;
+    }
+
+    public static byte[] signMessage(RawTransaction rawTransaction, Credentials credentials) {
+        byte[] encodedTransaction = encode(rawTransaction);
+        Sign.SignatureData signatureData =
+                Sign.signMessage(encodedTransaction, credentials.getEcKeyPair());
+
+        return encode(rawTransaction, signatureData);
     }
 
     public String sign(RawTransaction transaction) {

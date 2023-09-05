@@ -54,6 +54,8 @@ import org.torusresearch.torusutils.types.SessionToken;
 import org.torusresearch.torusutils.types.TorusCtorOptions;
 import org.web3j.crypto.Credentials;
 import org.web3j.crypto.RawTransaction;
+import org.web3j.crypto.Sign;
+import org.web3j.crypto.TransactionEncoder;
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.DefaultBlockParameterName;
 import org.web3j.protocol.core.methods.response.EthChainId;
@@ -62,6 +64,7 @@ import org.web3j.protocol.core.methods.response.EthGetTransactionCount;
 import org.web3j.protocol.core.methods.response.EthSendTransaction;
 import org.web3j.protocol.http.HttpService;
 import org.web3j.utils.Convert;
+import org.web3j.utils.Numeric;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -204,6 +207,8 @@ public class FirstFragment extends Fragment {
                             evmAddress = torusLoginResponse.getPublicAddress();
                             String publicAddress = torusLoginResponse.getPublicAddress();
                             activity.postboxKey = torusLoginResponse.getPrivateKey().toString(16);
+                            System.out.println("evmAddress: " + evmAddress);
+                            System.out.println("privateKey: " + torusLoginResponse.getPrivateKey().toString(16));
                             activity.userInfo = torusLoginResponse.getUserInfo();
                             activity.sessionData = torusLoginResponse.getRetrieveSharesResponse().getSessionData();
                             binding.resultView.append("publicAddress: " + publicAddress);
@@ -338,8 +343,8 @@ public class FirstFragment extends Fragment {
                                 }
 
                                 // reconstruct and getTssPubKey
-                                activity.tKey.reconstruct(reconstructResult -> {
-                                    if (reconstructResult instanceof Result.Error) {
+                                activity.tKey.reconstruct(_reconstructResult -> {
+                                    if (_reconstructResult instanceof Result.Error) {
                                         throw new RuntimeException("Could not reconstruct tkey");
                                     }
                                     try {
@@ -362,7 +367,7 @@ public class FirstFragment extends Fragment {
 
                                     tssNonce = TSSModule.getTSSNonce(activity.tKey, tag, false);
 
-                                    TSSModule.getTSSShare(activity.transferKey, tag, factorKey, 0, _result -> {
+                                    TSSModule.getTSSShare(activity.tKey, tag, factorKey, 0, _result -> {
                                         if (_result instanceof Result.Error) {
                                             System.out.println("Could not create tagged tss shares for tkey");
                                         }
@@ -402,6 +407,7 @@ public class FirstFragment extends Fragment {
                                     //                    re("factorPub", factorPub);
                                     PrivateKey finalFactorKey = factorKey;
                                     try {
+                                        PrivateKey finalFactorKey1 = factorKey;
                                         TSSModule.createTaggedTSSTagShare(activity.tKey, defaultTag, null, factorPub, 2, nodeDetail, torusUtils, createTaggedResult -> {
                                             if (createTaggedResult instanceof Result.Error) {
                                                 throw new RuntimeException("Could not createTaggedTSSTagShare tkey");
@@ -452,6 +458,17 @@ public class FirstFragment extends Fragment {
                                                         } catch (RuntimeError | JSONException e) {
                                                             throw new RuntimeException(e);
                                                         }
+
+                                                        tssNonce = TSSModule.getTSSNonce(activity.tKey, defaultTag, false);
+
+                                                        TSSModule.getTSSShare(activity.transferKey, defaultTag, finalFactorKey1.hex, 0, _result -> {
+                                                            if (_result instanceof Result.Error) {
+                                                                System.out.println("Could not create tagged tss shares for tkey");
+                                                            }
+                                                            tssShareResponse = ((Result.Success<Pair<String, String>>) _result).data;
+                                                            tssShare = tssShareResponse.second;
+                                                            tssIndex = tssShareResponse.first;
+                                                        });
                                                         // disable button
                                                         userHasCreatedTkey();
                                                         hideLoading();
@@ -1008,6 +1025,7 @@ public class FirstFragment extends Fragment {
 
         binding.tssSignTransaction.setOnClickListener(_view -> {
             try {
+                System.out.println("evmAddress: " + evmAddress);
                 EthereumTssAccount tssAccount = new EthereumTssAccount(evmAddress, pubKey.get(), factor_key, tssNonce, tssShare, tssIndex,
                         "default", verifier, verifierId, nodeDetail.getTorusIndexes(), nodeDetail.getTorusNodeTSSEndpoints(),
                         signatureString);
@@ -1037,7 +1055,8 @@ public class FirstFragment extends Fragment {
                         EthChainId chainIdResponse = web3j.ethChainId().sendAsync().get();
                         BigInteger chainId = chainIdResponse.getChainId();
 
-                        String privateKey = "fba4137335dc20dc23ad3dcd9f4ad728370b09131a6a14abf6c839748700780d";
+                        String privateKey = activity.postboxKey; //"fba4137335dc20dc23ad3dcd9f4ad728370b09131a6a14abf6c839748700780d";
+
                         Credentials credentials = Credentials.create(privateKey);
 
                         rawTransaction.set(RawTransaction.createTransaction(
@@ -1051,12 +1070,12 @@ public class FirstFragment extends Fragment {
                                 gasPrice
                         ));
 
-                /*byte[] signedMessage = TransactionEncoder.signMessage(rawTransaction.get(), credentials);
-                System.out.println("SignedMessage: " + signedMessage);
-                String _signature= Numeric.toHexString(signedMessage);
-                System.out.println("Signature: " + _signature);
-                EthSendTransaction _ethSendTransaction = web3j.ethSendRawTransaction(_signature).send();
-                System.out.println("Transaction: " + _ethSendTransaction.getTransactionHash());*/
+                        /*byte[] signedMessage = TransactionEncoder.signMessage(rawTransaction.get(), credentials);
+                        System.out.println("SignedMessage: " + signedMessage);
+                        String _signature= Numeric.toHexString(signedMessage);
+                        System.out.println("Signature: " + _signature);
+                        EthSendTransaction _ethSendTransaction = web3j.ethSendRawTransaction(_signature).send();
+                        System.out.println("Transaction: " + _ethSendTransaction.getTransactionHash());*/
 
                         TSSClient client;
                         Map<String, String> coeffs;
@@ -1130,12 +1149,19 @@ public class FirstFragment extends Fragment {
                                         if (verify) {
                                             String signature = TSSHelpers.hexSignature(signatureResult.getFirst(),
                                                     signatureResult.getSecond(), signatureResult.getThird());
-                                            activity.runOnUiThread(() -> TssClientHelper.showAlert(activity, "Signature: "+ signature));
 
                                             try {
-                                                EthSendTransaction ethSendTransaction = web3j.ethSendRawTransaction("0x" + signature).send();
+                                                Sign.SignatureData signatureData = new Sign.SignatureData((byte) (signatureResult.getThird() + 27),
+                                                        signatureResult.getFirst().toByteArray(),
+                                                        signatureResult.getSecond().toByteArray());
+                                                byte[] signedMsg = TransactionEncoder.encode(rawTransaction.get(), signatureData);
+                                                String finalSig= Numeric.toHexString(signedMsg);
+                                                EthSendTransaction ethSendTransaction = web3j.ethSendRawTransaction(finalSig).send();
                                                 if(ethSendTransaction.getError() != null) {
-                                                    System.out.println("Transaction: " + ethSendTransaction.getTransactionHash());
+                                                    activity.runOnUiThread(() -> TssClientHelper.showAlert(activity, "Error: "+ ethSendTransaction.getError().getMessage()));
+                                                    //System.out.println("Transaction: " + ethSendTransaction.getTransactionHash());
+                                                } else {
+                                                    activity.runOnUiThread(() -> TssClientHelper.showAlert(activity, "TransactionHash: "+ ethSendTransaction.getTransactionHash()));
                                                 }
                                             } catch (IOException e) {
                                                 throw new RuntimeException(e);
