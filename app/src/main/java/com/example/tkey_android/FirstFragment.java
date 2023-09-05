@@ -3,6 +3,7 @@ package com.example.tkey_android;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.util.Base64;
 import android.util.Pair;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -52,7 +53,7 @@ import org.torusresearch.fetchnodedetails.types.TorusNetwork;
 import org.torusresearch.torusutils.TorusUtils;
 import org.torusresearch.torusutils.types.SessionToken;
 import org.torusresearch.torusutils.types.TorusCtorOptions;
-import org.web3j.crypto.Credentials;
+import org.web3j.crypto.Hash;
 import org.web3j.crypto.RawTransaction;
 import org.web3j.crypto.Sign;
 import org.web3j.crypto.TransactionEncoder;
@@ -68,10 +69,8 @@ import org.web3j.utils.Numeric;
 
 import java.io.IOException;
 import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -1020,31 +1019,33 @@ public class FirstFragment extends Fragment {
 //        });
 
         binding.tssSignMessage.setOnClickListener(_view -> {
+            showLoading();
             sign(true);
         });
 
         binding.tssSignTransaction.setOnClickListener(_view -> {
             try {
+                showLoading();
                 System.out.println("evmAddress: " + evmAddress);
-                EthereumTssAccount tssAccount = new EthereumTssAccount(evmAddress, pubKey.get(), factor_key, tssNonce, tssShare, tssIndex,
-                        "default", verifier, verifierId, nodeDetail.getTorusIndexes(), nodeDetail.getTorusNodeTSSEndpoints(),
-                        signatureString);
 
                 String url = "https://rpc.ankr.com/eth_goerli";
                 Web3j web3j = Web3j.build(new HttpService(url));
                 double amount = 0.001;
-                String fromAdress = tssAccount.address;
-                String toAddress = tssAccount.address;
+                String fromAdress = evmAddress;
+                String toAddress = evmAddress;
                 AtomicReference<RawTransaction> rawTransaction = new AtomicReference<>();
                 new Thread(() -> {
                     try {
+
+                        System.out.println("fromAdd: " + evmAddress);
                         EthGetTransactionCount ethGetTransactionCount = web3j.ethGetTransactionCount(
                                 fromAdress,
                                 DefaultBlockParameterName.LATEST
                         ).send();
-                        String data = "hello world";
                         BigInteger nonce = ethGetTransactionCount.getTransactionCount();
+                        System.out.println("nonce: " + nonce);
                         BigInteger value = Convert.toWei(Double.toString(amount), Convert.Unit.ETHER).toBigInteger();
+                        System.out.println("value: " + value);
                         BigInteger gasLimit = BigInteger.valueOf(21000);
                         System.out.println("GasLimit: " + gasLimit);
 
@@ -1055,27 +1056,16 @@ public class FirstFragment extends Fragment {
                         EthChainId chainIdResponse = web3j.ethChainId().sendAsync().get();
                         BigInteger chainId = chainIdResponse.getChainId();
 
-                        String privateKey = activity.postboxKey; //"fba4137335dc20dc23ad3dcd9f4ad728370b09131a6a14abf6c839748700780d";
-
-                        Credentials credentials = Credentials.create(privateKey);
-
                         rawTransaction.set(RawTransaction.createTransaction(
                                 chainId.longValue(),
                                 nonce,
                                 gasLimit,
-                                credentials.getAddress(),
+                                toAddress,
                                 value,
-                                data,
+                                "",
                                 gasPrice,
                                 gasPrice
                         ));
-
-                        /*byte[] signedMessage = TransactionEncoder.signMessage(rawTransaction.get(), credentials);
-                        System.out.println("SignedMessage: " + signedMessage);
-                        String _signature= Numeric.toHexString(signedMessage);
-                        System.out.println("Signature: " + _signature);
-                        EthSendTransaction _ethSendTransaction = web3j.ethSendRawTransaction(_signature).send();
-                        System.out.println("Transaction: " + _ethSendTransaction.getTransactionHash());*/
 
                         TSSClient client;
                         Map<String, String> coeffs;
@@ -1091,6 +1081,7 @@ public class FirstFragment extends Fragment {
                             try {
                                 connected = client.checkConnected();
                             } catch (Exception e) {
+                                hideLoading();
                                 throw new EthereumSignerError(EthereumSignerError.ErrorType.UNKNOWN_ERROR);
                             }
 
@@ -1098,10 +1089,9 @@ public class FirstFragment extends Fragment {
                                 new Thread(() -> {
                                     Precompute precompute;
                                     try {
-                                        precompute = client.precompute((Map<String, String>) coeffs, signatureString);
+                                        precompute = client.precompute(coeffs, signatureString);
                                     } catch (Exception e) {
-                                        System.out.println("Exception:" + e);
-                                        e.printStackTrace();
+                                        hideLoading();
                                         throw new EthereumSignerError(EthereumSignerError.ErrorType.UNKNOWN_ERROR);
                                     }
 
@@ -1109,31 +1099,31 @@ public class FirstFragment extends Fragment {
                                     try {
                                         ready = client.isReady();
                                     } catch (Exception e) {
+                                        hideLoading();
                                         throw new EthereumSignerError(EthereumSignerError.ErrorType.UNKNOWN_ERROR);
                                     }
 
                                     if (ready) {
                                         //to check
-                                        String msg = rawTransaction.get().getData();
-                                        if (data == null) {
+                                        RawTransaction raw = rawTransaction.get();
+                                        if (raw == null) {
                                             throw new EthereumSignerError(EthereumSignerError.ErrorType.EMPTY_RAW_TRANSACTION);
                                         }
-                                        String msgHash = TSSHelpers.hashMessage(msg);
 
-                                        String signingMessage = null;
-                                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                                            signingMessage = Base64.getEncoder().encodeToString(msgHash.getBytes(StandardCharsets.UTF_8));
-                                        }
+                                        byte[] encodedTransaction = TransactionEncoder.encode(rawTransaction.get());
+                                        String encodedTransactionString = android.util.Base64.encodeToString(Hash.sha3(encodedTransaction), Base64.NO_WRAP);
 
                                         Triple<BigInteger, BigInteger, Byte> signatureResult;
                                         try {
-                                            signatureResult = client.sign(msgHash, true, "", precompute, signatureString);
+                                            signatureResult = client.sign(encodedTransactionString, true, "", precompute, signatureString);
                                         } catch (TSSClientError e) {
+                                            hideLoading();
                                             throw new RuntimeException(e);
                                         }
                                         try {
                                             client.cleanup(signatureString.toArray(new String[0]));
                                         } catch (TSSClientError e) {
+                                            hideLoading();
                                             throw new RuntimeException(e);
                                         }
 
@@ -1141,50 +1131,63 @@ public class FirstFragment extends Fragment {
                                         try {
                                             uncompressedPubKey = new KeyPoint(pubKey.get()).getPublicKey(KeyPoint.PublicKeyEncoding.FullAddress);
                                         } catch (RuntimeError e) {
+                                            hideLoading();
                                             throw new RuntimeException(e);
                                         }
-                                        boolean verify = TSSHelpers.verifySignature(msgHash, signatureResult.getFirst(),
+                                        boolean verify = TSSHelpers.verifySignature(encodedTransactionString, signatureResult.getFirst(),
                                                 signatureResult.getSecond(), signatureResult.getThird(), TssClientHelper.convertToBytes(uncompressedPubKey));
 
                                         if (verify) {
+                                            //getFirst() : s, getSecond(): r, getThird(): v
                                             String signature = TSSHelpers.hexSignature(signatureResult.getFirst(),
                                                     signatureResult.getSecond(), signatureResult.getThird());
 
                                             try {
                                                 Sign.SignatureData signatureData = new Sign.SignatureData((byte) (signatureResult.getThird() + 27),
-                                                        signatureResult.getFirst().toByteArray(),
-                                                        signatureResult.getSecond().toByteArray());
+                                                        signatureResult.getSecond().toByteArray(),
+                                                        signatureResult.getFirst().toByteArray());
+                                                System.out.println("signatureData: " + signatureData);
                                                 byte[] signedMsg = TransactionEncoder.encode(rawTransaction.get(), signatureData);
-                                                String finalSig= Numeric.toHexString(signedMsg);
+
+                                                String finalSig = Numeric.toHexString(signedMsg);
+                                                System.out.println("finalSig: " + finalSig);
                                                 EthSendTransaction ethSendTransaction = web3j.ethSendRawTransaction(finalSig).send();
-                                                if(ethSendTransaction.getError() != null) {
-                                                    activity.runOnUiThread(() -> TssClientHelper.showAlert(activity, "Error: "+ ethSendTransaction.getError().getMessage()));
-                                                    //System.out.println("Transaction: " + ethSendTransaction.getTransactionHash());
+                                                hideLoading();
+                                                if (ethSendTransaction.getError() != null) {
+                                                    activity.runOnUiThread(() -> TssClientHelper.showAlert(activity, "Error: " + ethSendTransaction.getError().getMessage()));
                                                 } else {
-                                                    activity.runOnUiThread(() -> TssClientHelper.showAlert(activity, "TransactionHash: "+ ethSendTransaction.getTransactionHash()));
+                                                    System.out.println("TransactionHash: " + ethSendTransaction.getTransactionHash());
+                                                    activity.runOnUiThread(() -> TssClientHelper.showAlert(activity, "TransactionHash: " + ethSendTransaction.getTransactionHash()));
                                                 }
                                             } catch (IOException e) {
+                                                hideLoading();
                                                 throw new RuntimeException(e);
                                             }
                                         } else {
+                                            hideLoading();
                                             activity.runOnUiThread(() -> Toast.makeText(activity, "Signature could not be verified", Toast.LENGTH_LONG).show());
                                         }
 
                                     } else {
+                                        hideLoading();
                                         activity.runOnUiThread(() -> Toast.makeText(activity, "Client is not ready, please try again", Toast.LENGTH_LONG).show());
                                     }
                                 }).start();
                             } else {
+                                hideLoading();
                                 activity.runOnUiThread(() -> Toast.makeText(activity, "Client is not connected, please try again", Toast.LENGTH_LONG).show());
                             }
                         } catch (Exception | RuntimeError e) {
+                            hideLoading();
                             throw new RuntimeException(e);
                         }
                     } catch (IOException | ExecutionException | InterruptedException e) {
+                        hideLoading();
                         throw new RuntimeException(e);
                     }
                 }).start();
             } catch (Exception e) {
+                hideLoading();
                 throw new RuntimeException(e);
             }
         });
@@ -1250,6 +1253,7 @@ public class FirstFragment extends Fragment {
                         boolean verify = TSSHelpers.verifySignature(msgHash, signatureResult.getFirst(),
                                 signatureResult.getSecond(), signatureResult.getThird(), TssClientHelper.convertToBytes(uncompressedPubKey));
 
+                        hideLoading();
                         if (verify) {
                             String signature = "Signature: " + TSSHelpers.hexSignature(signatureResult.getFirst(),
                                     signatureResult.getSecond(), signatureResult.getThird());
@@ -1259,13 +1263,16 @@ public class FirstFragment extends Fragment {
                         }
 
                     } else {
+                        hideLoading();
                         requireActivity().runOnUiThread(() -> Toast.makeText(requireActivity(), "Client is not ready, please try again", Toast.LENGTH_LONG).show());
                     }
                 }).start();
             } else {
+                hideLoading();
                 requireActivity().runOnUiThread(() -> Toast.makeText(requireActivity(), "Client is not connected, please try again", Toast.LENGTH_LONG).show());
             }
         } catch (Exception | RuntimeError e) {
+            hideLoading();
             throw new RuntimeException(e);
         }
     }
