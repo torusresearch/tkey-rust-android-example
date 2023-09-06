@@ -206,8 +206,6 @@ public class FirstFragment extends Fragment {
                         activity.runOnUiThread(() -> {
                             String publicAddress = torusLoginResponse.getPublicAddress();
                             activity.postboxKey = torusLoginResponse.getPrivateKey().toString(16);
-                            System.out.println("evmAddress: " + torusLoginResponse.getPublicAddress());
-                            System.out.println("privateKey: " + torusLoginResponse.getPrivateKey().toString(16));
                             activity.userInfo = torusLoginResponse.getUserInfo();
                             activity.sessionData = torusLoginResponse.getRetrieveSharesResponse().getSessionData();
                             binding.resultView.append("publicAddress: " + publicAddress);
@@ -348,9 +346,6 @@ public class FirstFragment extends Fragment {
                                     }
                                     try {
                                         KeyDetails keyDetails2 = activity.tKey.getKeyDetails();
-                                        System.out.println("EllipticCompress public Key:" + keyDetails2.getPublicKeyPoint().getPublicKey(KeyPoint.PublicKeyEncoding.EllipticCompress));
-                                        System.out.println("FullAddress public Key:" + keyDetails2.getPublicKeyPoint().getPublicKey(KeyPoint.PublicKeyEncoding.FullAddress));
-
                                     } catch (RuntimeError e) {
                                         throw new RuntimeException(e);
                                     }
@@ -365,8 +360,6 @@ public class FirstFragment extends Fragment {
                                             KeyPoint keyPoint = new KeyPoint(pubKey.get());
                                             fullTssPubKey = keyPoint.getPublicKey(KeyPoint.PublicKeyEncoding.FullAddress);
                                             evmAddress = TssClientHelper.generateAddressFromPubKey(new BigInteger(keyPoint.getX(), 16), new BigInteger(keyPoint.getY(), 16));
-                                            System.out.println("evmAddress: " + evmAddress);
-
                                         } catch (RuntimeError e) {
                                             throw new RuntimeException(e);
                                         }
@@ -455,9 +448,6 @@ public class FirstFragment extends Fragment {
                                                     }
 
                                                     saveStringToSharedPreferences(finalFactorKey.hex);
-
-                                                    System.out.println("factorKey");
-                                                    System.out.println(finalFactorKey.hex);
 
                                                     // reconstruction
                                                     activity.tKey.reconstruct(reconstructResult -> {
@@ -1033,7 +1023,7 @@ public class FirstFragment extends Fragment {
 
         binding.tssSignMessage.setOnClickListener(_view -> {
             showLoading();
-            sign(true);
+            sign();
         });
 
         binding.tssSignTransaction.setOnClickListener(_view -> {
@@ -1053,16 +1043,10 @@ public class FirstFragment extends Fragment {
                                 DefaultBlockParameterName.LATEST
                         ).send();
                         BigInteger nonce = ethGetTransactionCount.getTransactionCount();
-                        System.out.println("nonce: " + nonce);
                         BigInteger value = Convert.toWei(Double.toString(amount), Convert.Unit.ETHER).toBigInteger();
-                        System.out.println("value: " + value);
                         BigInteger gasLimit = BigInteger.valueOf(21000);
-                        System.out.println("GasLimit: " + gasLimit);
-
                         EthGasPrice gasPriceResponse = web3j.ethGasPrice().send();
                         BigInteger gasPrice = gasPriceResponse.getGasPrice();
-                        System.out.println("GasPrice: " + gasPrice);
-
                         EthChainId chainIdResponse = web3j.ethChainId().sendAsync().get();
                         BigInteger chainId = chainIdResponse.getChainId();
 
@@ -1143,11 +1127,9 @@ public class FirstFragment extends Fragment {
                                         Sign.SignatureData signatureData = new Sign.SignatureData((byte) (signatureResult.getThird() + 27),
                                                 signatureResult.getSecond().toByteArray(),
                                                 signatureResult.getFirst().toByteArray());
-                                        System.out.println("signatureData: " + signatureData);
                                         byte[] signedMsg = TransactionEncoder.encode(rawTransaction.get(), signatureData);
 
                                         String finalSig = Numeric.toHexString(signedMsg);
-                                        System.out.println("finalSig: " + finalSig);
                                         EthSendTransaction ethSendTransaction = web3j.ethSendRawTransaction(finalSig).send();
                                         hideLoading();
                                         if (ethSendTransaction.getError() != null) {
@@ -1183,7 +1165,7 @@ public class FirstFragment extends Fragment {
         });
     }
 
-    private void sign(boolean isSigningMessage) {
+    private void sign() {
         TSSClient client;
         Map<String, String> coeffs;
         Pair<TSSClient, Map<String, String>> clientCoeffsPair;
@@ -1205,9 +1187,8 @@ public class FirstFragment extends Fragment {
                 new Thread(() -> {
                     Precompute precompute;
                     try {
-                        precompute = client.precompute((Map<String, String>) coeffs, signatureString);
+                        precompute = client.precompute(coeffs, signatureString);
                     } catch (Exception e) {
-                        System.out.println("Exception:" + e);
                         e.printStackTrace();
                         throw new EthereumSignerError(EthereumSignerError.ErrorType.UNKNOWN_ERROR);
                     }

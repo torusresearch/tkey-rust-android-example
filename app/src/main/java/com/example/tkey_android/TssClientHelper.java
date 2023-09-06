@@ -7,7 +7,6 @@ import androidx.appcompat.app.AlertDialog;
 
 import com.web3auth.tkey.RuntimeError;
 import com.web3auth.tkey.ThresholdKey.Common.KeyPoint;
-import com.web3auth.tss_client_android.client.Delimiters;
 import com.web3auth.tss_client_android.client.EndpointsData;
 import com.web3auth.tss_client_android.client.TSSClient;
 import com.web3auth.tss_client_android.client.TSSHelpers;
@@ -23,7 +22,6 @@ import org.web3j.crypto.Keys;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -33,9 +31,6 @@ public class TssClientHelper {
         BigInteger random = randomKey.add(BigInteger.valueOf(System.currentTimeMillis() / 1000));
         String sessionNonce = TSSHelpers.base64ToBase64url(TSSHelpers.hashMessage(random.toByteArray().toString()));
         String session = TSSHelpers.assembleFullSession(verifier, verifierId, selectedTag, Integer.toString(tssNonce), sessionNonce);
-
-        System.out.println("PublicKey: " + publicKey);
-        System.out.println("TssIndex: " + tssIndex);
 
         BigInteger userTssIndex = new BigInteger(tssIndex, 16);
         int parties = 4;
@@ -54,24 +49,12 @@ public class TssClientHelper {
 
         BigInteger shareUnsigned = new BigInteger(tssShare, 16);
         BigInteger share = shareUnsigned;
-        System.out.println("Share: " + share);
-        System.out.println("ClientIndex: " + clientIndex);
         String uncompressedPubKey = new KeyPoint(publicKey).getPublicKey(KeyPoint.PublicKeyEncoding.FullAddress);
-        System.out.println("UncompressedPubKey: "+ uncompressedPubKey);
-
         BigInteger denormalizeShare = TSSHelpers.denormalizeShare(nodeInd.toArray(new BigInteger[0]), userTssIndex, share);
+
         TSSClient client = new TSSClient(session, clientIndex, partyIndexes.stream().mapToInt(Integer::intValue).toArray(),
                 endpoints.toArray(new String[0]), socketUrls.toArray(new String[0]), TSSHelpers.base64Share(denormalizeShare),
                 TSSHelpers.base64PublicKey(hexStringToByteArray(uncompressedPubKey)));
-
-        System.out.println("Session: "+ session);
-        System.out.println("ClientIndex: "+ clientIndex);
-        System.out.println("Parties: " + Arrays.toString(partyIndexes.stream().mapToInt(Integer::intValue).toArray()));
-        System.out.println("Endpoints: " + Arrays.toString(endpoints.toArray(new String[0])));
-        System.out.println("TssSocketEndpoints: " + Arrays.toString(socketUrls.toArray(new String[0])));
-        System.out.println("Share: " + TSSHelpers.base64Share(share));
-        System.out.println("PubKey: "+ TSSHelpers.base64PublicKey(hexStringToByteArray(uncompressedPubKey)));
-        System.out.println("socketSession: " + session.split(Delimiters.Delimiter4)[1]);
 
         return new Pair<>(client, coeffs);
     }
@@ -94,7 +77,6 @@ public class TssClientHelper {
         for (int i = 0; i < len; i += 2) {
             data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4) + Character.digit(s.charAt(i + 1), 16));
         }
-        System.out.println("after conversion byte array: " + Arrays.toString(data) + "length: " + data.length);
         return data;
     }
 
