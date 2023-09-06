@@ -1,7 +1,6 @@
 package com.example.tkey_android;
 
 import android.content.Context;
-import android.content.DialogInterface;
 import android.util.Pair;
 
 import androidx.appcompat.app.AlertDialog;
@@ -13,6 +12,14 @@ import com.web3auth.tss_client_android.client.EndpointsData;
 import com.web3auth.tss_client_android.client.TSSClient;
 import com.web3auth.tss_client_android.client.TSSHelpers;
 import com.web3auth.tss_client_android.client.util.Secp256k1;
+
+import org.bouncycastle.jce.ECNamedCurveTable;
+import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec;
+import org.bouncycastle.math.ec.ECPoint;
+import org.torusresearch.torusutils.helpers.Utils;
+import org.web3j.crypto.ECKeyPair;
+import org.web3j.crypto.Hash;
+import org.web3j.crypto.Keys;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -65,8 +72,6 @@ public class TssClientHelper {
         System.out.println("PubKey: "+ TSSHelpers.base64PublicKey(hexStringToByteArray(uncompressedPubKey)));
         System.out.println("socketSession: " + session.split(Delimiters.Delimiter4)[1]);
 
-        System.out.println("ServerCoeffs: " + coeffs);
-
         return new Pair<>(client, coeffs);
     }
 
@@ -88,7 +93,7 @@ public class TssClientHelper {
         for (int i = 0; i < len; i += 2) {
             data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4) + Character.digit(s.charAt(i + 1), 16));
         }
-        System.out.println("after conversion byte array: " + data + "length: " + data.length);
+        System.out.println("after conversion byte array: " + Arrays.toString(data) + "length: " + data.length);
         return data;
     }
 
@@ -111,17 +116,24 @@ public class TssClientHelper {
         return new EndpointsData(endpoints, tssWSEndpoints, partyIndexes);
     }
 
-    public static void showAlert(final Context context, final String message)
-    {
+    public static void showAlert(final Context context, final String message) {
         AlertDialog.Builder alertbox = new AlertDialog.Builder(context);
         alertbox.setCancelable(false);
         alertbox.setMessage(message);
-        alertbox.setNeutralButton("OK", new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int which) {
-                dialog.dismiss();
-            }
-        });
+        alertbox.setNeutralButton("OK", (dialog, which) -> dialog.dismiss());
 
         alertbox.show();
+    }
+
+    public static String generateAddressFromPrivKey(String privateKey) {
+        BigInteger privKey = new BigInteger(privateKey, 16);
+        return Keys.toChecksumAddress(Keys.getAddress(ECKeyPair.create(privKey.toByteArray())));
+    }
+
+    public static String generateAddressFromPubKey(BigInteger pubKeyX, BigInteger pubKeyY) {
+        ECNamedCurveParameterSpec curve = ECNamedCurveTable.getParameterSpec("secp256k1");
+        ECPoint rawPoint = curve.getCurve().createPoint(pubKeyX, pubKeyY);
+        String finalPubKey = Utils.padLeft(rawPoint.getAffineXCoord().toString(), '0', 64) + Utils.padLeft(rawPoint.getAffineYCoord().toString(), '0', 64);
+        return Keys.toChecksumAddress(Hash.sha3(finalPubKey).substring(64 - 38));
     }
 }
