@@ -38,10 +38,6 @@ public class MainActivity extends AppCompatActivity {
     public StorageLayer tkeyStorage;
     public ServiceProvider tkeyProvider;
 
-    public ThresholdKey transferKey;
-    public StorageLayer transferStorage;
-    public ServiceProvider transferProvider;
-
     public String postboxKey;
 
     public SharedPreferences sharedpreferences;
@@ -52,9 +48,6 @@ public class MainActivity extends AppCompatActivity {
         this.tKey = null;
         this.tkeyProvider = null;
         this.tkeyStorage = null;
-        this.transferKey = null;
-        this.transferProvider = null;
-        this.transferStorage = null;
     }
 
     @Override
