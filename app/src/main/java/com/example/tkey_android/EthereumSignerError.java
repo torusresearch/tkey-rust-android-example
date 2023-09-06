@@ -11,6 +11,8 @@ public class EthereumSignerError extends Error {
         switch (errorType) {
             case EMPTY_RAW_TRANSACTION:
                 return "emptyRawTransaction";
+            case INSUFFICIENT_Funds:
+                return "insufficientFunds";
             case UNKNOWN_ERROR:
                 return "unknownError";
             default:
@@ -20,6 +22,7 @@ public class EthereumSignerError extends Error {
 
     public enum ErrorType {
         EMPTY_RAW_TRANSACTION,
+        INSUFFICIENT_Funds,
         UNKNOWN_ERROR
     }
 }
