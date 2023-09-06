@@ -43,7 +43,7 @@ dependencies {
     implementation 'androidx.navigation:navigation-fragment:2.5.3'
     implementation 'androidx.navigation:navigation-ui:2.5.3'
     implementation 'androidx.annotation:annotation:1.2.0'
-    implementation files('libs/tkey-native/tkey-debug.aar')
+    implementation 'com.github.tkey:tkey-android:v2-d72d2b334b-1'
 
     implementation 'com.github.grvgoel81:customauth-android-sdk:5.0.3'
     implementation 'com.github.grvgoel81:fetch-node-details-java:4.0.0'

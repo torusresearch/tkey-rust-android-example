@@ -290,7 +290,7 @@ public class FirstFragment extends Fragment {
                 RssComm rss_comm = new RssComm();
 
                 activity.tkeyStorage = new StorageLayer(false, "https://metadata.tor.us", 2);
-                activity.tkeyProvider = new ServiceProvider(true, activity.postboxKey,true, verifier, verifierId, nodeDetail);
+                activity.tkeyProvider = new ServiceProvider(false, activity.postboxKey,true, verifier, verifierId, nodeDetail);
                 activity.tKey = new ThresholdKey(null, null, activity.tkeyStorage, activity.tkeyProvider, null, null, true, false, rss_comm);
 
                 activity.tKey.initialize(activity.postboxKey, null, false, false, false, false, null, 0, null, result -> {
@@ -372,11 +372,12 @@ public class FirstFragment extends Fragment {
 
                                     tssNonce = TSSModule.getTSSNonce(activity.tKey, tag, false);
 
-                                    TSSModule.getTSSShare(activity.tKey, tag, factorKey, 0, _result -> {
-                                        if (_result instanceof Result.Error) {
-                                            System.out.println("Could not create tagged tss shares for tkey");
+                                    TSSModule.getTSSShare(activity.tKey, tag, factorKey, 0, getTSSShareResult -> {
+                                        if (getTSSShareResult instanceof Result.Error) {
+                                            System.out.println("could not get tss share");
+                                            throw new RuntimeException("could not get tss share");
                                         }
-                                        tssShareResponse = ((Result.Success<Pair<String, String>>) _result).data;
+                                        tssShareResponse = ((Result.Success<Pair<String, String>>) getTSSShareResult).data;
                                         tssShare = tssShareResponse.second;
                                         tssIndex = tssShareResponse.first;
                                     });
@@ -486,16 +487,19 @@ public class FirstFragment extends Fragment {
                                 });
 
                             } catch (Exception | RuntimeError e) {
+                                TssClientHelper.showAlert(activity, "Error: " + e.getMessage());
                                 hideLoading();
                                 renderError(e);
                             }
                         }
                     } catch (RuntimeError | JSONException e) {
+                        TssClientHelper.showAlert(activity, "Error: " + e.getMessage());
                         throw new RuntimeException(e);
                     }
 
                 });
             } catch (Exception | RuntimeError e) {
+                TssClientHelper.showAlert(activity, "Error: " + e.getMessage());
                 hideLoading();
                 renderError(e);
             }
@@ -846,7 +850,7 @@ public class FirstFragment extends Fragment {
             try {
                 // delete locally stored share
                 StorageLayer temp_sl = new StorageLayer(false, "https://metadata.tor.us", 2);
-                ServiceProvider temp_sp = new ServiceProvider(true, activity.postboxKey,true, null, null, null);
+                ServiceProvider temp_sp = new ServiceProvider(false, activity.postboxKey,true, null, null, null);
                 ThresholdKey temp_key = new ThresholdKey(null, null, temp_sl, temp_sp, null, null, true, false, null);
 
                 activity.sharedpreferences.edit().clear().apply();
