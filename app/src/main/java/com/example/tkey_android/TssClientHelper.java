@@ -59,8 +59,9 @@ public class TssClientHelper {
         String uncompressedPubKey = new KeyPoint(publicKey).getPublicKey(KeyPoint.PublicKeyEncoding.FullAddress);
         System.out.println("UncompressedPubKey: "+ uncompressedPubKey);
 
+        BigInteger denormalizeShare = TSSHelpers.denormalizeShare(nodeInd.toArray(new BigInteger[0]), userTssIndex, share);
         TSSClient client = new TSSClient(session, clientIndex, partyIndexes.stream().mapToInt(Integer::intValue).toArray(),
-                endpoints.toArray(new String[0]), socketUrls.toArray(new String[0]), TSSHelpers.base64Share(share),
+                endpoints.toArray(new String[0]), socketUrls.toArray(new String[0]), TSSHelpers.base64Share(denormalizeShare),
                 TSSHelpers.base64PublicKey(hexStringToByteArray(uncompressedPubKey)));
 
         System.out.println("Session: "+ session);
