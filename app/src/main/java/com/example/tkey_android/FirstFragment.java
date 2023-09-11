@@ -370,7 +370,11 @@ public class FirstFragment extends Fragment {
                                         }
                                     });
 
-                                    tssNonce = TSSModule.getTSSNonce(activity.tKey, tag, false);
+                                    try {
+                                        tssNonce = TSSModule.getTSSNonce(activity.tKey, tag, false);
+                                    } catch (Exception e) {
+                                        throw new RuntimeException(e);
+                                    }
 
                                     TSSModule.getTSSShare(activity.tKey, tag, factorKey, 0, getTSSShareResult -> {
                                         if (getTSSShareResult instanceof Result.Error) {
@@ -440,7 +444,7 @@ public class FirstFragment extends Fragment {
                                                         description.put("tssTag", defaultTag);
                                                         description.put("tssShareIndex", 2);
                                                         description.put("dateAdded", System.currentTimeMillis()/1000);
-                                                } catch (JSONException | RuntimeError e) {
+                                                } catch (RuntimeError | Exception e) {
                                                     throw new RuntimeException(e);
                                                 }
                                                 activity.tKey.addShareDescription(shareIndexes.get(0), description.toString(), true, addShareResult -> {
@@ -458,13 +462,13 @@ public class FirstFragment extends Fragment {
                                                         }
                                                         try {
                                                             HashMap<String, ArrayList<String>> shareDescriptions = activity.tKey.getShareDescriptions();
-                                                        } catch (RuntimeError | JSONException e) {
+                                                            tssNonce = TSSModule.getTSSNonce(activity.tKey, defaultTag, false);
+                                                        } catch (RuntimeError | Exception e) {
                                                             throw new RuntimeException(e);
                                                         }
 
-                                                        tssNonce = TSSModule.getTSSNonce(activity.tKey, defaultTag, false);
 
-                                                        TSSModule.getTSSShare(activity.transferKey, defaultTag, finalFactorKey1.hex, 0, _result -> {
+                                                        TSSModule.getTSSShare(activity.tKey, defaultTag, finalFactorKey1.hex, 0, _result -> {
                                                             if (_result instanceof Result.Error) {
                                                                 System.out.println("Could not create tagged tss shares for tkey");
                                                             }
@@ -481,7 +485,7 @@ public class FirstFragment extends Fragment {
                                                 });
                                             });
                                         });
-                                    } catch (Exception | RuntimeError e) {
+                                    } catch (Exception e) {
                                         throw new RuntimeException(e);
                                     }
                                 });
