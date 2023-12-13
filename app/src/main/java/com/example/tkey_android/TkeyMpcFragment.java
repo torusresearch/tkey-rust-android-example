@@ -9,7 +9,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
@@ -18,6 +17,7 @@ import androidx.fragment.app.Fragment;
 import com.example.tkey_android.databinding.FragmentFirstBinding;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.gson.Gson;
+
 import com.web3auth.tkey.RuntimeError;
 import com.web3auth.tkey.ThresholdKey.Common.KeyPoint;
 import com.web3auth.tkey.ThresholdKey.Common.PrivateKey;
@@ -31,6 +31,7 @@ import com.web3auth.tkey.ThresholdKey.ThresholdKey;
 import com.web3auth.web3_android_mpc_provider.CustomSigningError;
 import com.web3auth.web3_android_mpc_provider.EthTssAccountParams;
 import com.web3auth.web3_android_mpc_provider.EthereumTssAccount;
+import com.web3auth.tss_client_android.client.TSSClientError;
 
 import org.bouncycastle.jce.ECNamedCurveTable;
 import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec;
@@ -52,7 +53,6 @@ import org.torusresearch.fetchnodedetails.types.TorusNetwork;
 import org.torusresearch.torusutils.TorusUtils;
 import org.torusresearch.torusutils.types.SessionToken;
 import org.torusresearch.torusutils.types.TorusCtorOptions;
-import org.web3j.crypto.ECKeyPair;
 import org.web3j.crypto.Hash;
 import org.web3j.crypto.Keys;
 import org.web3j.protocol.Web3j;
@@ -62,7 +62,6 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -73,10 +72,6 @@ public class TkeyMpcFragment extends Fragment {
         alertbox.setMessage(message);
         alertbox.setNeutralButton("OK", (dialog, which) -> dialog.dismiss());
         alertbox.show();
-    }
-    public static String generateAddressFromPrivKey(String privateKey) {
-        BigInteger privKey = new BigInteger(privateKey, 16);
-        return Keys.toChecksumAddress(Keys.getAddress(ECKeyPair.create(privKey.toByteArray())));
     }
     public static String generateAddressFromPubKey(BigInteger pubKeyX, BigInteger pubKeyY) {
         ECNamedCurveParameterSpec curve = ECNamedCurveTable.getParameterSpec("secp256k1");
@@ -497,60 +492,65 @@ public class TkeyMpcFragment extends Fragment {
 
         binding.tssSignMessage.setOnClickListener(_view -> {
             showLoading();
-
-            EthTssAccountParams params = new EthTssAccountParams(
-                    fullTssPubKey,
-                    factor_key,
-                    tssNonce,
-                    tssShare,
-                    tssIndex,
-                    selected_tag,
-                    verifier,
-                    verifierId,
-                    nodeDetail.getTorusIndexes(),
-                    nodeDetail.getTorusNodeTSSEndpoints(),
-                    signatureString.toArray()
-            );
-
-            EthereumTssAccount account = new EthereumTssAccount(params);
-            String message = "hello world";
-            try {
-                account.signMessage(message);
-            } catch (CustomSigningError e) {
-                throw new RuntimeException(e);
-            }
-        });
-
-        binding.tssSignTransaction.setOnClickListener(_view -> {
-            try {
-                showLoading();
-
+            new Thread(() -> {
                 EthTssAccountParams params = new EthTssAccountParams(
                         fullTssPubKey,
                         factor_key,
                         tssNonce,
                         tssShare,
                         tssIndex,
-                        selected_tag,
+                        "default",
                         verifier,
                         verifierId,
                         nodeDetail.getTorusIndexes(),
                         nodeDetail.getTorusNodeTSSEndpoints(),
-                        signatureString.toArray()
+                        signatureString.toArray(new String[0])
                 );
 
                 EthereumTssAccount account = new EthereumTssAccount(params);
-                BigInteger gasLimit = BigInteger.valueOf(21000);
-                String toAddress = "0xE09543f1974732F5D6ad442dDf176D9FA54a5Be0";
+                String message = "hello world";
+                try {
+                    account.signMessage(message);
+                    hideLoading();
+                } catch (CustomSigningError | TSSClientError e) {
+                    hideLoading();
+                    throw new RuntimeException(e);
+                }
+            }).start();
+        });
 
-                String url = "https://rpc.ankr.com/eth_goerli";
-                Web3j web3j = Web3j.build(new HttpService(url));
-                String signedTransaction = account.signTransaction(web3j, toAddress, 0.001,0.001,null,gasLimit);
-                web3j.ethSendRawTransaction(signedTransaction);
-            } catch (Exception e) {
-                hideLoading();
-                throw new RuntimeException(e);
-            }
+        binding.tssSignTransaction.setOnClickListener(_view -> {
+                showLoading();
+                new Thread(() -> {
+                    try {
+                        EthTssAccountParams params = new EthTssAccountParams(
+                                fullTssPubKey,
+                                factor_key,
+                                tssNonce,
+                                tssShare,
+                                tssIndex,
+                                "default",
+                                verifier,
+                                verifierId,
+                                nodeDetail.getTorusIndexes(),
+                                nodeDetail.getTorusNodeTSSEndpoints(),
+                                signatureString.toArray(new String[0])
+                        );
+
+                        EthereumTssAccount account = new EthereumTssAccount(params);
+                        BigInteger gasLimit = BigInteger.valueOf(21000);
+                        String toAddress = "0xE09543f1974732F5D6ad442dDf176D9FA54a5Be0";
+
+                        String url = "https://rpc.ankr.com/eth_goerli";
+                        Web3j web3j = Web3j.build(new HttpService(url));
+                        String signedTransaction = account.signTransaction(web3j, toAddress, 0.001, 0.001, null, gasLimit);
+                        web3j.ethSendRawTransaction(signedTransaction);
+                        hideLoading();
+                    } catch (Exception e) {
+                        hideLoading();
+                        throw new RuntimeException(e);
+                    }
+                }).start();
         });
     }
 
@@ -608,23 +608,6 @@ public class TkeyMpcFragment extends Fragment {
             binding.tssSignMessage.setEnabled(true);
             binding.tssSignTransaction.setEnabled(true);
         });
-    }
-
-    public String generateRandomPassword(int length) {
-        // Define the characters from which the password will be formed
-        String allowedChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()";
-
-        Random random = new Random();
-        StringBuilder password = new StringBuilder();
-
-        // Generate the password by randomly selecting characters from the allowedChars string
-        for (int i = 0; i < length; i++) {
-            int randomIndex = random.nextInt(allowedChars.length());
-            char randomChar = allowedChars.charAt(randomIndex);
-            password.append(randomChar);
-        }
-
-        return password.toString();
     }
 
     @Override

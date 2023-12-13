@@ -47,7 +47,7 @@ dependencies {
     implementation 'com.github.grvgoel81:customauth-android-sdk:5.0.3'
     implementation 'com.github.grvgoel81:fetch-node-details-java:4.0.0'
     implementation 'com.github.grvgoel81:torus-utils-java:5.0.0'
-    implementation 'com.github.tkey:web3-android-mpc-provider:0.0.2'
+    implementation 'com.github.tkey:web3-android-mpc-provider:d9b71aee34'
     implementation 'com.github.tkey:tkey-android:v2-SNAPSHOT'
     implementation 'org.web3j:core:4.9.5'
 
