@@ -533,10 +533,14 @@ public class TkeyMpcFragment extends Fragment {
 
                         String url = "https://rpc.ankr.com/eth_goerli";
                         Web3j web3j = Web3j.build(new HttpService(url));
-                        String signedTransaction = account.signLegacyTransaction(web3j, toAddress, 0.001, null, gasLimit);
-                         EthSendTransaction ethSendTransaction = web3j.ethSendRawTransaction(signedTransaction).send();
+                        String signedTransaction = account.signTransaction(web3j, toAddress, 0.001, 0.0000000000000001, null, gasLimit);
+                         EthSendTransaction ethSendTransaction = web3j.ethSendRawTransaction(signedTransaction).sendAsync().get();
                          if (ethSendTransaction.getError() != null) {
-                            requireActivity().runOnUiThread(() -> showAlert(activity, "Error: " + ethSendTransaction.getError().getMessage()));
+                             if (ethSendTransaction.getError().getMessage().equals("INTERNAL_ERROR: insufficient funds")) {
+                                 requireActivity().runOnUiThread(() -> showAlert(activity, "Please add funds to account" + account.evmAddress + "and try again"));
+                             } else {
+                                 requireActivity().runOnUiThread(() -> showAlert(activity, "Error: " + ethSendTransaction.getError().getMessage()));
+                             }
                          } else {
                             requireActivity().runOnUiThread(() -> showAlert(activity, "TransactionHash: " + ethSendTransaction.getTransactionHash()));
                          }
