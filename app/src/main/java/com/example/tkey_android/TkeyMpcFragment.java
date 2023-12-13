@@ -33,9 +33,6 @@ import com.web3auth.web3_android_mpc_provider.EthTssAccountParams;
 import com.web3auth.web3_android_mpc_provider.EthereumTssAccount;
 import com.web3auth.tss_client_android.client.TSSClientError;
 
-import org.bouncycastle.jce.ECNamedCurveTable;
-import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec;
-import org.bouncycastle.math.ec.ECPoint;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.torusresearch.customauth.CustomAuth;
@@ -53,9 +50,8 @@ import org.torusresearch.fetchnodedetails.types.TorusNetwork;
 import org.torusresearch.torusutils.TorusUtils;
 import org.torusresearch.torusutils.types.SessionToken;
 import org.torusresearch.torusutils.types.TorusCtorOptions;
-import org.web3j.crypto.Hash;
-import org.web3j.crypto.Keys;
 import org.web3j.protocol.Web3j;
+import org.web3j.protocol.core.methods.response.EthSendTransaction;
 import org.web3j.protocol.http.HttpService;
 
 import java.math.BigInteger;
@@ -72,12 +68,6 @@ public class TkeyMpcFragment extends Fragment {
         alertbox.setMessage(message);
         alertbox.setNeutralButton("OK", (dialog, which) -> dialog.dismiss());
         alertbox.show();
-    }
-    public static String generateAddressFromPubKey(BigInteger pubKeyX, BigInteger pubKeyY) {
-        ECNamedCurveParameterSpec curve = ECNamedCurveTable.getParameterSpec("secp256k1");
-        ECPoint rawPoint = curve.getCurve().createPoint(pubKeyX, pubKeyY);
-        String finalPubKey = org.torusresearch.torusutils.helpers.Utils.padLeft(rawPoint.getAffineXCoord().toString(), '0', 64) + org.torusresearch.torusutils.helpers.Utils.padLeft(rawPoint.getAffineYCoord().toString(), '0', 64);
-        return Keys.toChecksumAddress(Hash.sha3(finalPubKey).substring(64 - 38));
     }
 
     private static final String GOOGLE_CLIENT_ID = "221898609709-obfn3p63741l5333093430j3qeiinaa8.apps.googleusercontent.com";
@@ -106,7 +96,6 @@ public class TkeyMpcFragment extends Fragment {
     private String verifierId = "";
     private String verifier = "";
     private NodeDetails nodeDetail;
-    private String evmAddress;
     private final AtomicReference<String> pubKey = new AtomicReference<>("");
     private ArrayList<String> signatureString;
     private Pair<String, String> tssShareResponse = new Pair<>("", "");
@@ -306,7 +295,6 @@ public class TkeyMpcFragment extends Fragment {
                                         try {
                                             KeyPoint keyPoint = new KeyPoint(pubKey.get());
                                             fullTssPubKey = keyPoint.getPublicKey(KeyPoint.PublicKeyEncoding.FullAddress);
-                                            evmAddress = generateAddressFromPubKey(new BigInteger(keyPoint.getX(), 16), new BigInteger(keyPoint.getY(), 16));
                                         } catch (RuntimeError e) {
                                             throw new RuntimeException(e);
                                         }
@@ -510,10 +498,12 @@ public class TkeyMpcFragment extends Fragment {
                 EthereumTssAccount account = new EthereumTssAccount(params);
                 String message = "hello world";
                 try {
-                    account.signMessage(message);
+                    String sig = account.signMessage(message);
                     hideLoading();
+                    requireActivity().runOnUiThread(() -> showAlert(activity, "Signature: " + sig));
                 } catch (CustomSigningError | TSSClientError e) {
                     hideLoading();
+                    requireActivity().runOnUiThread(() -> showAlert(activity, "Error: " + e.getMessage()));
                     throw new RuntimeException(e);
                 }
             }).start();
@@ -543,11 +533,17 @@ public class TkeyMpcFragment extends Fragment {
 
                         String url = "https://rpc.ankr.com/eth_goerli";
                         Web3j web3j = Web3j.build(new HttpService(url));
-                        String signedTransaction = account.signTransaction(web3j, toAddress, 0.001, 0.001, null, gasLimit);
-                        web3j.ethSendRawTransaction(signedTransaction);
+                        String signedTransaction = account.signLegacyTransaction(web3j, toAddress, 0.001, null, gasLimit);
+                         EthSendTransaction ethSendTransaction = web3j.ethSendRawTransaction(signedTransaction).send();
+                         if (ethSendTransaction.getError() != null) {
+                            requireActivity().runOnUiThread(() -> showAlert(activity, "Error: " + ethSendTransaction.getError().getMessage()));
+                         } else {
+                            requireActivity().runOnUiThread(() -> showAlert(activity, "TransactionHash: " + ethSendTransaction.getTransactionHash()));
+                         }
                         hideLoading();
                     } catch (Exception e) {
                         hideLoading();
+                        requireActivity().runOnUiThread(() -> showAlert(activity, "Error: " + e.getMessage()));
                         throw new RuntimeException(e);
                     }
                 }).start();
